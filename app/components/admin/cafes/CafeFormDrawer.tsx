@@ -189,6 +189,8 @@ const createEmptyForm = (): CafeFormPayload => ({
   ambienceModern: 3,
   ambassadorComment: "",
   website: "",
+  latitude: null,
+  longitude: null,
   images: createEmptyImages(),
 });
 
@@ -232,6 +234,8 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   ambienceModern: cafe.ambienceModern,
   ambassadorComment: cafe.ambassadorComment,
   website: cafe.website,
+  latitude: cafe.latitude,
+  longitude: cafe.longitude,
   images: {
     main: createImageState(cafe.imageMainPath),
     exterior: createImageState(cafe.imageExteriorPath),
@@ -1649,14 +1653,22 @@ function StepIndicator({
   );
 }
 
+function formatTimestamp(date: Date) {
+  const y = date.getFullYear().toString();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  const hour = `${date.getHours()}`.padStart(2, "0");
+  const minute = `${date.getMinutes()}`.padStart(2, "0");
+  const second = `${date.getSeconds()}`.padStart(2, "0");
+  return `${y}${m}${d}${hour}${minute}${second}`;
+}
+
 function generateStoragePath(
-  cafeName: string,
+  _cafeName: string,
   category: string,
   originalName: string,
 ) {
-  const safeName = cafeName
-    ? cafeName.replace(/\s+/g, "-").toLowerCase()
-    : "draft";
   const ext = originalName.split(".").pop() ?? "jpg";
-  return `cafes/${safeName}/${category}-${Date.now()}.${ext}`;
+  const timestamp = formatTimestamp(new Date());
+  return `cafes/${timestamp}/${category}-${Date.now()}.${ext}`;
 }

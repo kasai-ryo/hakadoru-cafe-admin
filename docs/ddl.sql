@@ -121,6 +121,8 @@ CREATE TABLE cafes (
   time_limit VARCHAR(100),
   status VARCHAR(50) DEFAULT 'open' CHECK (status IN ('open', 'recently_opened', 'closed')),
   website TEXT,
+  latitude DOUBLE PRECISION,
+  longitude DOUBLE PRECISION,
   phone VARCHAR(20),
   seats INT,
   wifi BOOLEAN NOT NULL DEFAULT FALSE,
@@ -218,6 +220,8 @@ COMMENT ON COLUMN cafes.image_power_path IS '電源席画像パス';
 COMMENT ON COLUMN cafes.image_drink_path IS 'ドリンク画像パス';
 COMMENT ON COLUMN cafes.image_food_path IS 'フード画像パス';
 COMMENT ON COLUMN cafes.image_other_paths IS 'その他画像パス（配列）';
+COMMENT ON COLUMN cafes.latitude IS '緯度';
+COMMENT ON COLUMN cafes.longitude IS '経度';
 COMMENT ON COLUMN cafes.deleted_at IS '論理削除日時（NULL=公開中）';
 
 -- ==================================================

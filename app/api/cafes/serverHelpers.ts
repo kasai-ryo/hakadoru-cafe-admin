@@ -125,22 +125,25 @@ function parseBase64(data: string) {
   };
 }
 
+function formatTimestamp(date: Date) {
+  const y = date.getFullYear().toString();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  const hour = `${date.getHours()}`.padStart(2, "0");
+  const minute = `${date.getMinutes()}`.padStart(2, "0");
+  const second = `${date.getSeconds()}`.padStart(2, "0");
+  return `${y}${m}${d}${hour}${minute}${second}`;
+}
+
 function generateStoragePath(
-  cafeName: string,
+  _cafeName: string,
   category: string,
   dataUrl: string,
 ) {
   const { contentType } = parseBase64(dataUrl);
   const ext = contentType.split("/")[1] || "jpg";
-  const slug = cafeName
-    ? cafeName
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, "")
-    : "";
-  const safeName = slug || "cafe";
-  return `cafes/${safeName}/${category}-${Date.now()}.${ext}`;
+  const timestamp = formatTimestamp(new Date());
+  return `cafes/${timestamp}/${category}-${Date.now()}.${ext}`;
 }
 
 export function buildCafeImageInsertRows(
@@ -182,4 +185,47 @@ export async function rollbackCafeInsert(
       error,
     );
   }
+}
+
+export async function geocodeCafeAddress(
+  payload: CafeFormPayload,
+): Promise<{ latitude: number; longitude: number } | null> {
+  const queryParts = [
+    payload.prefecture,
+    payload.addressLine1,
+    payload.addressLine2,
+    payload.addressLine3,
+  ]
+    .filter((part) => part && part.trim().length > 0)
+    .map((part) => part.trim());
+  const query = queryParts.join(" ") || payload.postalCode;
+  if (!query) {
+    return null;
+  }
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "1");
+  url.searchParams.set("q", query);
+
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "hakadoru-cafe-admin/1.0 (+https://hakadoru.jp)",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Geocoding failed with status ${response.status}`);
+  }
+  const results = (await response.json()) as Array<{
+    lat: string;
+    lon: string;
+  }>;
+  if (!Array.isArray(results) || results.length === 0) {
+    return null;
+  }
+  const lat = Number.parseFloat(results[0].lat);
+  const lon = Number.parseFloat(results[0].lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return null;
+  }
+  return { latitude: lat, longitude: lon };
 }

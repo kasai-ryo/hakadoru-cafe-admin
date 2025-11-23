@@ -88,6 +88,8 @@ export interface Cafe {
   ambienceModern: number;
   ambassadorComment: string;
   website: string;
+  latitude: number | null;
+  longitude: number | null;
   imageMainPath: string;
   imageExteriorPath: string;
   imageInteriorPath: string;
@@ -139,5 +141,7 @@ export interface CafeFormPayload {
   ambienceModern: number;
   ambassadorComment: string;
   website: string;
+  latitude: number | null;
+  longitude: number | null;
   images: Record<ImageCategoryKey, ImageUpload | null>;
 }

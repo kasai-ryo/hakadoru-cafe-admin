@@ -47,6 +47,8 @@ type CafeTableRow = {
   ambience_modern: number;
   ambassador_comment: string | null;
   website: string | null;
+  latitude: number | null;
+  longitude: number | null;
   image_main_path: string;
   image_exterior_path: string;
   image_interior_path: string;
@@ -119,6 +121,8 @@ export function changePayloadToCafe(
     ambienceModern: payload.ambienceModern,
     ambassadorComment: payload.ambassadorComment,
     website: payload.website,
+    latitude: payload.latitude ?? base?.latitude ?? null,
+    longitude: payload.longitude ?? base?.longitude ?? null,
     imageMainPath: images.main?.storagePath || base?.imageMainPath || "",
     imageExteriorPath:
       images.exterior?.storagePath || base?.imageExteriorPath || "",
@@ -203,6 +207,8 @@ export function buildCafeTableInsert(
     ambience_modern: payload.ambienceModern,
     ambassador_comment: payload.ambassadorComment || null,
     website: payload.website || null,
+    latitude: payload.latitude ?? null,
+    longitude: payload.longitude ?? null,
     image_main_path: ensureImagePath(payload, "main"),
     image_exterior_path: ensureImagePath(payload, "exterior"),
     image_interior_path: ensureImagePath(payload, "interior"),
@@ -257,6 +263,8 @@ export function mapCafeRowToCafe(row: CafeTableRow): Cafe {
     ambienceModern: row.ambience_modern,
     ambassadorComment: row.ambassador_comment ?? "",
     website: row.website ?? "",
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
     imageMainPath: row.image_main_path,
     imageExteriorPath: row.image_exterior_path,
     imageInteriorPath: row.image_interior_path,

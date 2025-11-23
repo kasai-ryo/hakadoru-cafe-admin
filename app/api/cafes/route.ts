@@ -8,6 +8,7 @@ import {
   uploadImagesToStorage,
   buildCafeImageInsertRows,
   rollbackCafeInsert,
+  geocodeCafeAddress,
 } from "@/app/api/cafes/serverHelpers";
 import { getSupabaseServerClient } from "@/app/lib/supabaseServer";
 import type { Cafe, CafeFormPayload } from "@/app/types/cafe";
@@ -26,6 +27,19 @@ export async function POST(request: Request) {
   const errors = validateCafePayload(payload);
   if (errors.length > 0) {
     return NextResponse.json({ errors }, { status: 422 });
+  }
+
+  try {
+    const coords = await geocodeCafeAddress(payload);
+    if (coords) {
+      payload = {
+        ...payload,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      };
+    }
+  } catch (geoError) {
+    console.warn("[cafes:POST] Geocoding failed", geoError);
   }
 
   const supabase = getSupabaseServerClient();
