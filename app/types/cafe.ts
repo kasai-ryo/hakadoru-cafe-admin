@@ -67,11 +67,12 @@ export interface Cafe {
   hoursNote: string;
   regularHolidays: string[];
   seats: number;
-  seatTypes: string[];
   wifi: boolean;
   outlet: OutletAvailability;
   lighting: LightingType;
   meetingRoom: boolean;
+  allowsShortLeave: boolean;
+  hasPrivateBooths: boolean;
   parking: boolean;
   smoking: SmokingOption;
   coffeePrice: number;
@@ -80,6 +81,7 @@ export interface Cafe {
   services: string[];
   paymentMethods: string[];
   customerTypes: string[];
+  recommendedWorkStyles: string[];
   crowdMatrix: CrowdMatrix;
   ambienceCasual: number;
   ambienceModern: number;
@@ -115,12 +117,13 @@ export interface CafeFormPayload {
   hoursWeekendTo: string;
   hoursNote: string;
   regularHolidays: string[];
-  seats: number;
-  seatTypes: string[];
+  seats: number | "";
   wifi: boolean;
   outlet: OutletAvailability;
   lighting: LightingType;
   meetingRoom: boolean;
+  allowsShortLeave: boolean;
+  hasPrivateBooths: boolean;
   parking: boolean;
   smoking: SmokingOption;
   coffeePrice: number;
@@ -129,6 +132,7 @@ export interface CafeFormPayload {
   services: string[];
   paymentMethods: string[];
   customerTypes: string[];
+  recommendedWorkStyles: string[];
   crowdMatrix: CrowdMatrix;
   ambienceCasual: number;
   ambienceModern: number;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import areas from "@/app/data/areas.json";
 import prefectures from "@/app/data/prefectures.json";
 import type {
@@ -37,29 +37,27 @@ const SERVICE_OPTIONS = [
   "モニター貸出あり",
   "窓際席あり",
   "ペットOK",
-  "子連れOK",
+  "充電器貸出あり",
+  "ブランケット貸出あり",
 ];
 
-const PAYMENT_OPTIONS = ["現金", "クレカ", "QR決済", "交通系IC", "電子マネー"];
+const PAYMENT_OPTIONS = ["現金", "クレカ", "QR決済", "交通系IC"];
 
 const CUSTOMER_TYPES = [
   "学生",
-  "ビジネス",
+  "会社員",
   "フリーランス",
   "ファミリー",
   "観光客",
-  "地元",
   "女子会",
   "カップル",
 ];
 
-const SEAT_TYPE_OPTIONS = [
-  "木製テーブル",
-  "カウンター",
-  "ソファ",
-  "ベンチ",
-  "ボックス席",
-  "スタンディング",
+const RECOMMENDED_WORK_OPTIONS = [
+  "PC作業",
+  "読書",
+  "勉強",
+  "打合せ",
 ];
 
 const CROWD_OPTIONS: { label: string; value: CrowdLevel }[] = [
@@ -88,23 +86,23 @@ const IMAGE_CATEGORIES: Array<{
   label: string;
   required: boolean;
 }> = [
-  { key: "main", label: "メイン画像", required: true },
-  { key: "exterior", label: "外観", required: true },
-  { key: "interior", label: "内観", required: true },
-  { key: "power", label: "電源席", required: true },
-  { key: "drink", label: "ドリンク", required: true },
-  { key: "food", label: "フード", required: false },
-  { key: "other1", label: "その他1", required: false },
-  { key: "other2", label: "その他2", required: false },
-  { key: "other3", label: "その他3", required: false },
-  { key: "other4", label: "その他4", required: false },
-  { key: "other5", label: "その他5", required: false },
-  { key: "other6", label: "その他6", required: false },
-  { key: "other7", label: "その他7", required: false },
-  { key: "other8", label: "その他8", required: false },
-  { key: "other9", label: "その他9", required: false },
-  { key: "other10", label: "その他10", required: false },
-];
+    { key: "main", label: "メイン画像", required: true },
+    { key: "exterior", label: "外観", required: true },
+    { key: "interior", label: "内観", required: true },
+    { key: "power", label: "電源席", required: true },
+    { key: "drink", label: "ドリンク", required: true },
+    { key: "food", label: "フード", required: false },
+    { key: "other1", label: "その他1", required: false },
+    { key: "other2", label: "その他2", required: false },
+    { key: "other3", label: "その他3", required: false },
+    { key: "other4", label: "その他4", required: false },
+    { key: "other5", label: "その他5", required: false },
+    { key: "other6", label: "その他6", required: false },
+    { key: "other7", label: "その他7", required: false },
+    { key: "other8", label: "その他8", required: false },
+    { key: "other9", label: "その他9", required: false },
+    { key: "other10", label: "その他10", required: false },
+  ];
 
 const createEmptyCrowdMatrix = (): CrowdMatrix => ({
   weekdayMorning: "normal",
@@ -156,12 +154,13 @@ const createEmptyForm = (): CafeFormPayload => ({
   hoursWeekendTo: "",
   hoursNote: "",
   regularHolidays: [],
-  seats: 0,
-  seatTypes: [],
+  seats: "",
   wifi: true,
   outlet: "all",
   lighting: "normal",
   meetingRoom: false,
+  allowsShortLeave: false,
+  hasPrivateBooths: false,
   parking: false,
   smoking: "no_smoking",
   coffeePrice: 0,
@@ -170,6 +169,7 @@ const createEmptyForm = (): CafeFormPayload => ({
   services: [],
   paymentMethods: [],
   customerTypes: [],
+  recommendedWorkStyles: [],
   crowdMatrix: createEmptyCrowdMatrix(),
   ambienceCasual: 3,
   ambienceModern: 3,
@@ -198,11 +198,12 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   hoursNote: cafe.hoursNote,
   regularHolidays: cafe.regularHolidays,
   seats: cafe.seats,
-  seatTypes: cafe.seatTypes,
   wifi: cafe.wifi,
   outlet: cafe.outlet,
   lighting: cafe.lighting,
   meetingRoom: cafe.meetingRoom,
+  allowsShortLeave: cafe.allowsShortLeave,
+  hasPrivateBooths: cafe.hasPrivateBooths,
   parking: cafe.parking,
   smoking: cafe.smoking,
   coffeePrice: cafe.coffeePrice,
@@ -211,6 +212,7 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   services: cafe.services,
   paymentMethods: cafe.paymentMethods,
   customerTypes: cafe.customerTypes,
+  recommendedWorkStyles: cafe.recommendedWorkStyles ?? [],
   crowdMatrix: cafe.crowdMatrix,
   ambienceCasual: cafe.ambienceCasual,
   ambienceModern: cafe.ambienceModern,
@@ -277,6 +279,15 @@ export function CafeFormDrawer({
   }, [isOpen, editingCafe]);
 
   useEffect(() => {
+    if (
+      formState.facilityType !== "coworking" &&
+      formState.allowsShortLeave
+    ) {
+      setFormState((prev) => ({ ...prev, allowsShortLeave: false }));
+    }
+  }, [formState.facilityType, formState.allowsShortLeave]);
+
+  useEffect(() => {
     if (isOpen) {
       return;
     }
@@ -298,7 +309,11 @@ export function CafeFormDrawer({
   };
 
   const handleChipToggle = (
-    key: "services" | "paymentMethods" | "customerTypes" | "seatTypes",
+    key:
+      | "services"
+      | "paymentMethods"
+      | "customerTypes"
+      | "recommendedWorkStyles",
     value: string,
   ) => {
     setFormState((prev) => {
@@ -425,16 +440,14 @@ export function CafeFormDrawer({
   return (
     <>
       <div
-        className={`fixed inset-0 bg-black/30 transition-opacity ${
-          isOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
+        className={`fixed inset-0 bg-black/30 transition-opacity ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          }`}
         onClick={onClose}
         aria-hidden="true"
       />
       <aside
-        className={`fixed right-0 top-0 z-40 h-full w-full max-w-5xl transform bg-white shadow-2xl transition-transform ${
-          isOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed right-0 top-0 z-40 h-full w-full max-w-5xl transform bg-white shadow-2xl transition-transform ${isOpen ? "translate-x-0" : "translate-x-full"
+          }`}
         aria-hidden={!isOpen}
       >
         <div className="flex h-full flex-col">
@@ -579,7 +592,11 @@ function InfoStep({
     value: CafeFormPayload[K],
   ) => void;
   onChipToggle: (
-    key: "services" | "paymentMethods" | "customerTypes" | "seatTypes",
+    key:
+      | "services"
+      | "paymentMethods"
+      | "customerTypes"
+      | "recommendedWorkStyles",
     value: string,
   ) => void;
   onHolidayToggle: (day: string) => void;
@@ -597,6 +614,7 @@ function InfoStep({
           />
           <SelectField
             label="施設タイプ"
+            required
             options={FACILITY_OPTIONS}
             value={formState.facilityType}
             onChange={(value) =>
@@ -627,6 +645,7 @@ function InfoStep({
           />
           <SelectField
             label="ステータス"
+            required
             options={[
               { label: "開店", value: "open" },
               { label: "最近オープン", value: "recently_opened" },
@@ -638,13 +657,13 @@ function InfoStep({
             }
           />
         </div>
-        <TextAreaField
-          label="アクセス情報"
-          value={formState.access}
-          placeholder="最寄駅や徒歩時間を入力（改行可）"
-          rows={4}
-          onChange={(value) => onChange("access", value)}
-        />
+        {formState.facilityType === "coworking" && (
+          <ToggleField
+            label="途中離席（外出）可"
+            checked={formState.allowsShortLeave}
+            onChange={(checked) => onChange("allowsShortLeave", checked)}
+          />
+        )}
         <TextField
           label="公式サイト"
           value={formState.website}
@@ -657,21 +676,21 @@ function InfoStep({
         <div className="grid gap-4 md:grid-cols-3">
           <TextField
             label="郵便番号"
-            required
             placeholder="例: 103-0027"
             value={formState.postalCode}
             onChange={(value) => onChange("postalCode", value)}
           />
           <TextField
-            label="住所1（市区町村）"
+            label="住所1（市区）"
             required
-            placeholder="例: 中央区日本橋"
+            placeholder="例: 品川区"
             value={formState.addressLine1}
             onChange={(value) => onChange("addressLine1", value)}
           />
           <TextField
-            label="住所2（番地）"
-            placeholder="例: 1-1-1"
+            label="住所2（町村番地）"
+            required
+            placeholder="例: 笹塚 1-1-1"
             value={formState.addressLine2}
             onChange={(value) => onChange("addressLine2", value)}
           />
@@ -681,6 +700,13 @@ function InfoStep({
           placeholder="例: ハカドルビル5F"
           value={formState.addressLine3}
           onChange={(value) => onChange("addressLine3", value)}
+        />
+        <TextAreaField
+          label="アクセス情報"
+          value={formState.access}
+          placeholder="最寄駅や徒歩時間を入力"
+          rows={4}
+          onChange={(value) => onChange("access", value)}
         />
       </Section>
 
@@ -725,16 +751,22 @@ function InfoStep({
       </Section>
 
       <Section title="設備・環境">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-4">
           <NumberField
             label="席数"
             value={formState.seats}
             onChange={(value) => onChange("seats", value)}
+            allowEmpty
           />
           <ToggleField
             label="Wi-Fi あり"
             checked={formState.wifi}
             onChange={(checked) => onChange("wifi", checked)}
+          />
+          <ToggleField
+            label="個別ブースあり"
+            checked={formState.hasPrivateBooths}
+            onChange={(checked) => onChange("hasPrivateBooths", checked)}
           />
           <ToggleField
             label="会議室あり"
@@ -817,19 +849,18 @@ function InfoStep({
             }
           />
         </div>
-        <ChipSelect
-          label="座席タイプ（複数選択可）"
-          options={SEAT_TYPE_OPTIONS}
-          values={formState.seatTypes}
-          onToggle={(value) => onChipToggle("seatTypes", value)}
-        />
       </Section>
 
       <Section title="料金・雰囲気・客層">
         <NumberField
           label="コーヒー1杯の値段（円）"
           value={formState.coffeePrice}
-          onChange={(value) => onChange("coffeePrice", value)}
+          onChange={(value) =>
+            onChange(
+              "coffeePrice",
+              typeof value === "number" ? value : 0,
+            )
+          }
         />
         <ChipSelect
           label="サービス"
@@ -848,6 +879,12 @@ function InfoStep({
           options={CUSTOMER_TYPES}
           values={formState.customerTypes}
           onToggle={(value) => onChipToggle("customerTypes", value)}
+        />
+        <ChipSelect
+          label="適した作業"
+          options={RECOMMENDED_WORK_OPTIONS}
+          values={formState.recommendedWorkStyles}
+          onToggle={(value) => onChipToggle("recommendedWorkStyles", value)}
         />
         <CrowdMatrixField
           crowdMatrix={formState.crowdMatrix}
@@ -868,7 +905,7 @@ function InfoStep({
         <TextAreaField
           label="アンバサダーコメント"
           value={formState.ambassadorComment}
-          placeholder="おすすめポイントや注意点を記載（改行可）"
+          placeholder="おすすめポイントや注意点を記載"
           rows={5}
           onChange={(value) => onChange("ambassadorComment", value)}
         />
@@ -1133,18 +1170,38 @@ function NumberField({
   label,
   value,
   onChange,
+  allowEmpty = false,
 }: {
   label: string;
-  value: number;
-  onChange: (value: number) => void;
+  value: number | "";
+  onChange: (value: number | "") => void;
+  allowEmpty?: boolean;
 }) {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const raw = event.target.value;
+    if (allowEmpty && raw === "") {
+      onChange("");
+      return;
+    }
+    if (raw === "") {
+      onChange(0);
+      return;
+    }
+    const parsed = Number(raw);
+    if (!Number.isNaN(parsed)) {
+      onChange(parsed);
+    }
+  };
+  const displayValue = allowEmpty && value === "" ? "" : value;
+
   return (
     <label className="block text-sm font-medium text-gray-700">
       {label}
       <input
         type="number"
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value) || 0)}
+        inputMode="numeric"
+        value={displayValue}
+        onChange={handleChange}
         className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
       />
     </label>
@@ -1259,11 +1316,10 @@ function ChipSelect({
               key={option}
               type="button"
               onClick={() => onToggle(option)}
-              className={`rounded-full border px-3 py-1 text-xs ${
-                isSelected
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-gray-200 text-gray-600 hover:border-primary hover:text-primary"
-              }`}
+              className={`rounded-full border px-3 py-1 text-xs ${isSelected
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-gray-200 text-gray-600 hover:border-primary hover:text-primary"
+                }`}
             >
               {option}
             </button>
@@ -1388,26 +1444,23 @@ function StepIndicator({
   };
   return (
     <div
-      className={`flex flex-1 items-center gap-2 text-xs font-medium ${
-        isClickable ? "cursor-pointer" : "cursor-default"
-      }`}
+      className={`flex flex-1 items-center gap-2 text-xs font-medium ${isClickable ? "cursor-pointer" : "cursor-default"
+        }`}
       onClick={handleClick}
     >
       <div
-        className={`flex h-8 w-8 items-center justify-center rounded-full ${
-          isCompleted
-            ? "bg-primary text-white"
-            : isActive
-              ? "border-2 border-primary text-primary"
-              : "border border-gray-300 text-gray-400"
-        }`}
+        className={`flex h-8 w-8 items-center justify-center rounded-full ${isCompleted
+          ? "bg-primary text-white"
+          : isActive
+            ? "border-2 border-primary text-primary"
+            : "border border-gray-300 text-gray-400"
+          }`}
       >
         {index + 1}
       </div>
       <span
-        className={`text-sm ${
-          isActive ? "text-gray-900" : "text-gray-500"
-        }`}
+        className={`text-sm ${isActive ? "text-gray-900" : "text-gray-500"
+          }`}
       >
         {label}
       </span>

@@ -164,7 +164,7 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
           <header className="flex flex-col gap-4 border-b border-gray-200 pb-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-wide text-gray-500">
-                Hakadoru Café
+                ハカドルカフェ
               </p>
               <h1 className="text-3xl font-semibold text-gray-900">
                 カフェ管理
@@ -250,12 +250,16 @@ function mapPayloadToCafe(payload: CafeFormPayload, base?: Cafe): Cafe {
     hoursWeekendTo: payload.hoursWeekendTo,
     hoursNote: payload.hoursNote,
     regularHolidays: payload.regularHolidays,
-    seats: payload.seats,
-    seatTypes: payload.seatTypes,
+    seats:
+      typeof payload.seats === "number"
+        ? payload.seats
+        : Number(payload.seats) || 0,
     wifi: payload.wifi,
     outlet: payload.outlet,
     lighting: payload.lighting,
     meetingRoom: payload.meetingRoom,
+    allowsShortLeave: payload.allowsShortLeave,
+    hasPrivateBooths: payload.hasPrivateBooths,
     parking: payload.parking,
     smoking: payload.smoking,
     coffeePrice: payload.coffeePrice,
@@ -269,8 +273,7 @@ function mapPayloadToCafe(payload: CafeFormPayload, base?: Cafe): Cafe {
     ambienceModern: payload.ambienceModern,
     ambassadorComment: payload.ambassadorComment,
     website: payload.website,
-    imageMainPath:
-      images.main?.storagePath || base?.imageMainPath || "",
+    imageMainPath: images.main?.storagePath || base?.imageMainPath || "",
     imageExteriorPath:
       images.exterior?.storagePath || base?.imageExteriorPath || "",
     imageInteriorPath:
@@ -280,16 +283,12 @@ function mapPayloadToCafe(payload: CafeFormPayload, base?: Cafe): Cafe {
     imageDrinkPath:
       images.drink?.storagePath || base?.imageDrinkPath || "",
     imageFoodPath:
-      images.food?.storagePath ||
-      base?.imageFoodPath ||
-      undefined,
-    imageOtherPaths: ((): string[] => {
-      const existing = base?.imageOtherPaths ?? [];
+      images.food?.storagePath || base?.imageFoodPath || undefined,
+    imageOtherPaths: (() => {
       const next: string[] = [];
       for (let i = 1; i <= 10; i += 1) {
         const key = `other${i}` as ImageCategoryKey;
-        const path =
-          images[key]?.storagePath || existing[i - 1] || "";
+        const path = images[key]?.storagePath;
         if (path) {
           next.push(path);
         }

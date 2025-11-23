@@ -109,11 +109,13 @@ CREATE TABLE cafes (
   website TEXT,
   phone VARCHAR(20),
   seats INT,
-  seat_types JSONB NOT NULL DEFAULT '[]'::jsonb,
+  seats INT,
   wifi BOOLEAN DEFAULT FALSE,
   outlet VARCHAR(20) CHECK (outlet IN ('all', 'most', 'half', 'some', 'none')),
   lighting VARCHAR(20) CHECK (lighting IN ('dark', 'normal', 'bright')),
   meeting_room BOOLEAN DEFAULT FALSE,
+  allow_short_leave BOOLEAN DEFAULT FALSE,
+  private_booths BOOLEAN DEFAULT FALSE,
   parking BOOLEAN DEFAULT FALSE,
   smoking VARCHAR(30) CHECK (smoking IN ('no_smoking', 'separated', 'e_cigarette', 'allowed')),
   coffee_price INT,
@@ -122,6 +124,7 @@ CREATE TABLE cafes (
   services JSONB,
   payment_methods JSONB,
   customer_types JSONB,
+  recommended_work JSONB NOT NULL DEFAULT '[]'::jsonb,
   crowd_levels JSONB NOT NULL DEFAULT '{
     "weekdayMorning":"normal",
     "weekdayAfternoon":"normal",
@@ -139,6 +142,7 @@ CREATE TABLE cafes (
   image_power_path TEXT NOT NULL,
   image_drink_path TEXT NOT NULL,
   image_food_path TEXT,
+  image_other_paths JSONB NOT NULL DEFAULT '[]'::jsonb,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -174,11 +178,12 @@ COMMENT ON COLUMN cafes.status IS '開店状況（open/recently_opened/closed）
 COMMENT ON COLUMN cafes.website IS 'ウェブサイトURL';
 COMMENT ON COLUMN cafes.phone IS '電話番号';
 COMMENT ON COLUMN cafes.seats IS '席数';
-COMMENT ON COLUMN cafes.seat_types IS '座席タイプ（配列）';
 COMMENT ON COLUMN cafes.wifi IS 'フリーWi-Fi';
 COMMENT ON COLUMN cafes.outlet IS 'コンセント（all/most/half/some/none）';
 COMMENT ON COLUMN cafes.lighting IS '照明（dark/normal/bright）';
 COMMENT ON COLUMN cafes.meeting_room IS '会議室';
+COMMENT ON COLUMN cafes.allow_short_leave IS '途中離席可';
+COMMENT ON COLUMN cafes.private_booths IS '個別ブース';
 COMMENT ON COLUMN cafes.parking IS '駐車場';
 COMMENT ON COLUMN cafes.smoking IS '禁煙・喫煙（no_smoking/separated/e_cigarette/allowed）';
 COMMENT ON COLUMN cafes.coffee_price IS 'コーヒー1杯の値段';
@@ -187,6 +192,7 @@ COMMENT ON COLUMN cafes.alcohol IS 'アルコール提供（available/night_only
 COMMENT ON COLUMN cafes.services IS 'サービス（配列）';
 COMMENT ON COLUMN cafes.payment_methods IS '支払い方法（配列）';
 COMMENT ON COLUMN cafes.customer_types IS '客層（配列）';
+COMMENT ON COLUMN cafes.recommended_work IS '適した作業（配列）';
 COMMENT ON COLUMN cafes.crowd_levels IS '混雑度（平日/休日×朝昼夜）';
 COMMENT ON COLUMN cafes.ambience_casual IS '雰囲気：カジュアル度（1-5）';
 COMMENT ON COLUMN cafes.ambience_modern IS '雰囲気：モダン度（1-5）';
@@ -197,6 +203,7 @@ COMMENT ON COLUMN cafes.image_interior_path IS '内観画像パス';
 COMMENT ON COLUMN cafes.image_power_path IS '電源席画像パス';
 COMMENT ON COLUMN cafes.image_drink_path IS 'ドリンク画像パス';
 COMMENT ON COLUMN cafes.image_food_path IS 'フード画像パス';
+COMMENT ON COLUMN cafes.image_other_paths IS 'その他画像パス（配列）';
 
 -- ==================================================
 -- 5. reports (作業報告)

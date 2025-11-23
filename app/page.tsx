@@ -5,7 +5,7 @@ export default function HomePage() {
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-white px-6 text-center">
       <div>
         <p className="text-sm uppercase tracking-wide text-gray-500">
-          Hakadoru Café Admin
+          ハカドルカフェ
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-gray-900">
           管理者ページへようこそ
