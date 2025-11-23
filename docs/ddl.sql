@@ -3,6 +3,20 @@
 -- バージョン: 1.0
 
 -- ==================================================
+-- Cleanup existing tables (開発・再実行時の初期化)
+-- ==================================================
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS cafe_images CASCADE;
+DROP TABLE IF EXISTS cafe_edit_requests CASCADE;
+DROP TABLE IF EXISTS cafe_requests CASCADE;
+DROP TABLE IF EXISTS favorites CASCADE;
+DROP TABLE IF EXISTS reports CASCADE;
+DROP TABLE IF EXISTS cafes CASCADE;
+DROP TABLE IF EXISTS accounts_plans CASCADE;
+DROP TABLE IF EXISTS ssoaccounts CASCADE;
+DROP TABLE IF EXISTS accounts CASCADE;
+
+-- ==================================================
 -- Extension: UUID生成用、全文検索用
 -- ==================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
