@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import type { Cafe, CafeFormPayload } from "@/app/types/cafe";
+import type {
+  Cafe,
+  CafeFormPayload,
+  ImageCategoryKey,
+} from "@/app/types/cafe";
 import {
   CafeFilterBar,
   type CafeFilterState,
@@ -105,64 +109,14 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
   };
 
   const handleSave = (payload: CafeFormPayload) => {
+    const updatedCafe = mapPayloadToCafe(payload, editingCafe ?? undefined);
     if (editingCafe) {
       setCafeList((prev) =>
-        prev.map((cafe) =>
-          cafe.id === editingCafe.id
-            ? {
-                ...cafe,
-                ...payload,
-                services: payload.services,
-                paymentMethods: payload.paymentMethods,
-                updated_at: new Date().toISOString(),
-              }
-            : cafe,
-        ),
+        prev.map((cafe) => (cafe.id === editingCafe.id ? updatedCafe : cafe)),
       );
     } else {
-      const now = new Date().toISOString();
-      const newCafe: Cafe = {
-        id: `draft-${crypto.randomUUID()}`,
-        name: payload.name,
-        area: payload.area,
-        address: payload.address,
-        phone: payload.phone,
-        access: "",
-        status: payload.status,
-        seats: 0,
-        seatType: "",
-        wifi: payload.wifi,
-        wifiSpeed: "",
-        outlet: payload.outlet,
-        lighting: "normal",
-        meetingRoom: false,
-        parking: false,
-        smoking: "no_smoking",
-        coffeePrice: 0,
-        bringOwnFood: "allowed",
-        alcohol: "unavailable",
-        services: payload.services,
-        paymentMethods: payload.paymentMethods,
-        crowdedness: payload.crowdedness,
-        customerTypes: [],
-        ambienceCasual: 3,
-        ambienceModern: 3,
-        ambassadorComment: "",
-        website: "",
-        timeLimit: "",
-        hoursWeekday: "",
-        hoursWeekend: "",
-        imagePath: payload.imagePath,
-        latitude: undefined,
-        longitude: undefined,
-        deleted_at: null,
-        updated_at: now,
-      };
-      setCafeList((prev) => [newCafe, ...prev]);
+      setCafeList((prev) => [updatedCafe, ...prev]);
     }
-
-    setIsDrawerOpen(false);
-    setEditingCafe(null);
   };
 
   const handleRequestDelete = (cafe: Cafe) => {
@@ -260,6 +214,91 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
       />
     </section>
   );
+}
+
+function mapPayloadToCafe(payload: CafeFormPayload, base?: Cafe): Cafe {
+  const now = new Date().toISOString();
+  const combinedAddress = [
+    payload.prefecture,
+    payload.addressLine1,
+    payload.addressLine2,
+    payload.addressLine3,
+  ]
+    .filter(Boolean)
+    .join("");
+
+  const images = payload.images;
+
+  return {
+    id: base?.id ?? `draft-${crypto.randomUUID()}`,
+    name: payload.name,
+    facilityType: payload.facilityType,
+    area: payload.area,
+    prefecture: payload.prefecture,
+    postalCode: payload.postalCode,
+    addressLine1: payload.addressLine1,
+    addressLine2: payload.addressLine2,
+    addressLine3: payload.addressLine3,
+    address: combinedAddress,
+    access: payload.access,
+    phone: payload.phone,
+    status: payload.status,
+    timeLimit: payload.timeLimit,
+    hoursWeekdayFrom: payload.hoursWeekdayFrom,
+    hoursWeekdayTo: payload.hoursWeekdayTo,
+    hoursWeekendFrom: payload.hoursWeekendFrom,
+    hoursWeekendTo: payload.hoursWeekendTo,
+    hoursNote: payload.hoursNote,
+    regularHolidays: payload.regularHolidays,
+    seats: payload.seats,
+    seatTypes: payload.seatTypes,
+    wifi: payload.wifi,
+    outlet: payload.outlet,
+    lighting: payload.lighting,
+    meetingRoom: payload.meetingRoom,
+    parking: payload.parking,
+    smoking: payload.smoking,
+    coffeePrice: payload.coffeePrice,
+    bringOwnFood: payload.bringOwnFood,
+    alcohol: payload.alcohol,
+    services: payload.services,
+    paymentMethods: payload.paymentMethods,
+    customerTypes: payload.customerTypes,
+    crowdMatrix: payload.crowdMatrix,
+    ambienceCasual: payload.ambienceCasual,
+    ambienceModern: payload.ambienceModern,
+    ambassadorComment: payload.ambassadorComment,
+    website: payload.website,
+    imageMainPath:
+      images.main?.storagePath || base?.imageMainPath || "",
+    imageExteriorPath:
+      images.exterior?.storagePath || base?.imageExteriorPath || "",
+    imageInteriorPath:
+      images.interior?.storagePath || base?.imageInteriorPath || "",
+    imagePowerPath:
+      images.power?.storagePath || base?.imagePowerPath || "",
+    imageDrinkPath:
+      images.drink?.storagePath || base?.imageDrinkPath || "",
+    imageFoodPath:
+      images.food?.storagePath ||
+      base?.imageFoodPath ||
+      undefined,
+    imageOtherPaths: ((): string[] => {
+      const existing = base?.imageOtherPaths ?? [];
+      const next: string[] = [];
+      for (let i = 1; i <= 10; i += 1) {
+        const key = `other${i}` as ImageCategoryKey;
+        const path =
+          images[key]?.storagePath || existing[i - 1] || "";
+        if (path) {
+          next.push(path);
+        }
+      }
+      return next;
+    })(),
+    deleted_at: base?.deleted_at ?? null,
+    updated_at: now,
+  };
 }
 
 interface LoginFormProps {

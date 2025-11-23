@@ -89,20 +89,28 @@ COMMENT ON COLUMN accounts_plans.canceled_at IS '解約日時';
 CREATE TABLE cafes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(200) NOT NULL,
+  facility_type VARCHAR(20) NOT NULL DEFAULT 'cafe' CHECK (facility_type IN ('cafe', 'coworking', 'hybrid', 'other')),
   area VARCHAR(100) NOT NULL,
+  prefecture VARCHAR(20) NOT NULL,
+  postal_code VARCHAR(10) NOT NULL,
+  address_line1 TEXT NOT NULL,
+  address_line2 TEXT,
+  address_line3 TEXT,
   address TEXT NOT NULL,
   access TEXT,
-  hours_weekday VARCHAR(100),
-  hours_weekend VARCHAR(100),
-  regular_holiday VARCHAR(100),
+  hours_weekday_from TIME,
+  hours_weekday_to TIME,
+  hours_weekend_from TIME,
+  hours_weekend_to TIME,
+  hours_note TEXT,
+  regular_holidays JSONB NOT NULL DEFAULT '[]'::jsonb,
   time_limit VARCHAR(100),
   status VARCHAR(50) DEFAULT 'open' CHECK (status IN ('open', 'recently_opened', 'closed')),
   website TEXT,
   phone VARCHAR(20),
   seats INT,
-  seat_type VARCHAR(100),
+  seat_types JSONB NOT NULL DEFAULT '[]'::jsonb,
   wifi BOOLEAN DEFAULT FALSE,
-  wifi_speed VARCHAR(50),
   outlet VARCHAR(20) CHECK (outlet IN ('all', 'most', 'half', 'some', 'none')),
   lighting VARCHAR(20) CHECK (lighting IN ('dark', 'normal', 'bright')),
   meeting_room BOOLEAN DEFAULT FALSE,
@@ -113,14 +121,24 @@ CREATE TABLE cafes (
   alcohol VARCHAR(30) CHECK (alcohol IN ('available', 'night_only', 'unavailable')),
   services JSONB,
   payment_methods JSONB,
-  crowdedness VARCHAR(20) CHECK (crowdedness IN ('empty', 'normal', 'crowded')),
   customer_types JSONB,
+  crowd_levels JSONB NOT NULL DEFAULT '{
+    "weekdayMorning":"normal",
+    "weekdayAfternoon":"normal",
+    "weekdayEvening":"normal",
+    "weekendMorning":"normal",
+    "weekendAfternoon":"normal",
+    "weekendEvening":"normal"
+  }'::jsonb,
   ambience_casual INT CHECK (ambience_casual >= 1 AND ambience_casual <= 5),
   ambience_modern INT CHECK (ambience_modern >= 1 AND ambience_modern <= 5),
-  hakadori_score INT NOT NULL CHECK (hakadori_score >= 1 AND hakadori_score <= 5),
   ambassador_comment TEXT,
-  latitude DECIMAL(10, 8),
-  longitude DECIMAL(11, 8),
+  image_main_path TEXT NOT NULL,
+  image_exterior_path TEXT NOT NULL,
+  image_interior_path TEXT NOT NULL,
+  image_power_path TEXT NOT NULL,
+  image_drink_path TEXT NOT NULL,
+  image_food_path TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -130,28 +148,34 @@ CREATE INDEX idx_cafes_area ON cafes(area);
 CREATE INDEX idx_cafes_name ON cafes(name);
 CREATE INDEX idx_cafes_name_trgm ON cafes USING GIN (name gin_trgm_ops);
 CREATE INDEX idx_cafes_address_trgm ON cafes USING GIN (address gin_trgm_ops);
-CREATE INDEX idx_cafes_hakadori_score ON cafes(hakadori_score DESC);
 CREATE INDEX idx_cafes_wifi ON cafes(wifi);
 CREATE INDEX idx_cafes_outlet ON cafes(outlet);
-CREATE INDEX idx_cafes_latitude_longitude ON cafes(latitude, longitude);
 
 COMMENT ON TABLE cafes IS 'カフェ情報';
 COMMENT ON COLUMN cafes.id IS 'カフェID';
 COMMENT ON COLUMN cafes.name IS 'カフェ名';
+COMMENT ON COLUMN cafes.facility_type IS '施設タイプ（cafe/coworking/hybrid/other）';
 COMMENT ON COLUMN cafes.area IS 'エリア';
+COMMENT ON COLUMN cafes.prefecture IS '都道府県';
+COMMENT ON COLUMN cafes.postal_code IS '郵便番号';
+COMMENT ON COLUMN cafes.address_line1 IS '市区町村';
+COMMENT ON COLUMN cafes.address_line2 IS '番地';
+COMMENT ON COLUMN cafes.address_line3 IS '建物名・フロア等';
 COMMENT ON COLUMN cafes.address IS '住所';
 COMMENT ON COLUMN cafes.access IS 'アクセス';
-COMMENT ON COLUMN cafes.hours_weekday IS '営業時間（平日）';
-COMMENT ON COLUMN cafes.hours_weekend IS '営業時間（休日）';
-COMMENT ON COLUMN cafes.regular_holiday IS '定休日';
+COMMENT ON COLUMN cafes.hours_weekday_from IS '営業時間（平日）開始';
+COMMENT ON COLUMN cafes.hours_weekday_to IS '営業時間（平日）終了';
+COMMENT ON COLUMN cafes.hours_weekend_from IS '営業時間（休日）開始';
+COMMENT ON COLUMN cafes.hours_weekend_to IS '営業時間（休日）終了';
+COMMENT ON COLUMN cafes.hours_note IS '営業時間補足';
+COMMENT ON COLUMN cafes.regular_holidays IS '定休日（配列）';
 COMMENT ON COLUMN cafes.time_limit IS '利用時間制限';
 COMMENT ON COLUMN cafes.status IS '開店状況（open/recently_opened/closed）';
 COMMENT ON COLUMN cafes.website IS 'ウェブサイトURL';
 COMMENT ON COLUMN cafes.phone IS '電話番号';
 COMMENT ON COLUMN cafes.seats IS '席数';
-COMMENT ON COLUMN cafes.seat_type IS '座席タイプ';
+COMMENT ON COLUMN cafes.seat_types IS '座席タイプ（配列）';
 COMMENT ON COLUMN cafes.wifi IS 'フリーWi-Fi';
-COMMENT ON COLUMN cafes.wifi_speed IS 'Wi-Fi速度';
 COMMENT ON COLUMN cafes.outlet IS 'コンセント（all/most/half/some/none）';
 COMMENT ON COLUMN cafes.lighting IS '照明（dark/normal/bright）';
 COMMENT ON COLUMN cafes.meeting_room IS '会議室';
@@ -162,14 +186,17 @@ COMMENT ON COLUMN cafes.bring_own_food IS '飲食物持込（allowed/not_allowed
 COMMENT ON COLUMN cafes.alcohol IS 'アルコール提供（available/night_only/unavailable）';
 COMMENT ON COLUMN cafes.services IS 'サービス（配列）';
 COMMENT ON COLUMN cafes.payment_methods IS '支払い方法（配列）';
-COMMENT ON COLUMN cafes.crowdedness IS '混雑度（empty/normal/crowded）';
 COMMENT ON COLUMN cafes.customer_types IS '客層（配列）';
+COMMENT ON COLUMN cafes.crowd_levels IS '混雑度（平日/休日×朝昼夜）';
 COMMENT ON COLUMN cafes.ambience_casual IS '雰囲気：カジュアル度（1-5）';
 COMMENT ON COLUMN cafes.ambience_modern IS '雰囲気：モダン度（1-5）';
-COMMENT ON COLUMN cafes.hakadori_score IS 'ハカドリ度（1-5）';
 COMMENT ON COLUMN cafes.ambassador_comment IS 'アンバサダーコメント';
-COMMENT ON COLUMN cafes.latitude IS '緯度';
-COMMENT ON COLUMN cafes.longitude IS '経度';
+COMMENT ON COLUMN cafes.image_main_path IS 'メイン画像パス';
+COMMENT ON COLUMN cafes.image_exterior_path IS '外観画像パス';
+COMMENT ON COLUMN cafes.image_interior_path IS '内観画像パス';
+COMMENT ON COLUMN cafes.image_power_path IS '電源席画像パス';
+COMMENT ON COLUMN cafes.image_drink_path IS 'ドリンク画像パス';
+COMMENT ON COLUMN cafes.image_food_path IS 'フード画像パス';
 
 -- ==================================================
 -- 5. reports (作業報告)
@@ -300,7 +327,26 @@ CREATE TABLE cafe_images (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   cafe_id UUID NOT NULL REFERENCES cafes(id) ON DELETE CASCADE,
   image_url TEXT NOT NULL,
-  image_type VARCHAR(20) NOT NULL CHECK (image_type IN ('main', 'interior', 'exterior', 'menu')),
+  image_type VARCHAR(20) NOT NULL CHECK (
+    image_type IN (
+      'main',
+      'exterior',
+      'interior',
+      'power',
+      'drink',
+      'food',
+      'other1',
+      'other2',
+      'other3',
+      'other4',
+      'other5',
+      'other6',
+      'other7',
+      'other8',
+      'other9',
+      'other10'
+    )
+  ),
   display_order INT DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -313,7 +359,7 @@ COMMENT ON TABLE cafe_images IS 'カフェ画像';
 COMMENT ON COLUMN cafe_images.id IS '画像ID';
 COMMENT ON COLUMN cafe_images.cafe_id IS 'カフェID';
 COMMENT ON COLUMN cafe_images.image_url IS '画像URL（Supabase Storage）';
-COMMENT ON COLUMN cafe_images.image_type IS '画像種別（main/interior/exterior/menu）';
+COMMENT ON COLUMN cafe_images.image_type IS '画像種別（main/exterior/interior/power/drink/food/other1-10）';
 COMMENT ON COLUMN cafe_images.display_order IS '表示順';
 
 -- ==================================================
