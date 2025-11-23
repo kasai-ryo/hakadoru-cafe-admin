@@ -64,6 +64,7 @@ const CROWD_OPTIONS: { label: string; value: CrowdLevel }[] = [
   { label: "空いている", value: "empty" },
   { label: "普通", value: "normal" },
   { label: "混雑", value: "crowded" },
+  { label: "不明", value: "unknown" }
 ];
 
 const CROWD_DEFINITIONS = {
@@ -113,10 +114,10 @@ const IMAGE_CATEGORIES: Array<{
 const createEmptyCrowdMatrix = (): CrowdMatrix => ({
   weekdayMorning: "normal",
   weekdayAfternoon: "normal",
-  weekdayEvening: "crowded",
+  weekdayEvening: "normal",
   weekendMorning: "normal",
-  weekendAfternoon: "crowded",
-  weekendEvening: "crowded",
+  weekendAfternoon: "normal",
+  weekendEvening: "normal",
 });
 
 const createEmptyImages = (): Record<
@@ -722,7 +723,6 @@ function InfoStep({
             required
             options={[
               { label: "開店", value: "open" },
-              { label: "最近オープン", value: "recently_opened" },
               { label: "閉店", value: "closed" },
             ]}
             value={formState.status}
@@ -954,6 +954,18 @@ function InfoStep({
             }
           />
         </div>
+        <ChipSelect
+          label="サービス"
+          options={SERVICE_OPTIONS}
+          values={formState.services}
+          onToggle={(value) => onChipToggle("services", value)}
+        />
+        <ChipSelect
+          label="適した作業"
+          options={RECOMMENDED_WORK_OPTIONS}
+          values={formState.recommendedWorkStyles}
+          onToggle={(value) => onChipToggle("recommendedWorkStyles", value)}
+        />
       </Section>
 
       <Section title="料金・雰囲気・客層">
@@ -968,12 +980,6 @@ function InfoStep({
           }
         />
         <ChipSelect
-          label="サービス"
-          options={SERVICE_OPTIONS}
-          values={formState.services}
-          onToggle={(value) => onChipToggle("services", value)}
-        />
-        <ChipSelect
           label="支払い方法"
           options={PAYMENT_OPTIONS}
           values={formState.paymentMethods}
@@ -984,16 +990,6 @@ function InfoStep({
           options={CUSTOMER_TYPES}
           values={formState.customerTypes}
           onToggle={(value) => onChipToggle("customerTypes", value)}
-        />
-        <ChipSelect
-          label="適した作業"
-          options={RECOMMENDED_WORK_OPTIONS}
-          values={formState.recommendedWorkStyles}
-          onToggle={(value) => onChipToggle("recommendedWorkStyles", value)}
-        />
-        <CrowdMatrixField
-          crowdMatrix={formState.crowdMatrix}
-          onChange={onCrowdChange}
         />
         <div className="grid gap-4 md:grid-cols-2">
           <SliderField
@@ -1013,6 +1009,13 @@ function InfoStep({
           placeholder="おすすめポイントや注意点を記載"
           rows={5}
           onChange={(value) => onChange("ambassadorComment", value)}
+        />
+      </Section>
+
+      <Section title="混雑状況">
+        <CrowdMatrixField
+          crowdMatrix={formState.crowdMatrix}
+          onChange={onCrowdChange}
         />
       </Section>
     </div>
