@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalize } from "@geolonia/normalize-japanese-addresses";
 import type {
   CafeFormPayload,
   ImageCategoryKey,
@@ -202,30 +203,11 @@ export async function geocodeCafeAddress(
   if (!query) {
     return null;
   }
-  const url = new URL("https://nominatim.openstreetmap.org/search");
-  url.searchParams.set("format", "json");
-  url.searchParams.set("limit", "1");
-  url.searchParams.set("q", query);
-
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "hakadoru-cafe-admin/1.0 (+https://hakadoru.jp)",
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`Geocoding failed with status ${response.status}`);
+  const result = await normalize(query);
+  const lat = result?.point?.lat;
+  const lng = result?.point?.lng;
+  if (typeof lat === "number" && typeof lng === "number") {
+    return { latitude: lat, longitude: lng };
   }
-  const results = (await response.json()) as Array<{
-    lat: string;
-    lon: string;
-  }>;
-  if (!Array.isArray(results) || results.length === 0) {
-    return null;
-  }
-  const lat = Number.parseFloat(results[0].lat);
-  const lon = Number.parseFloat(results[0].lon);
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-    return null;
-  }
-  return { latitude: lat, longitude: lon };
+  return null;
 }

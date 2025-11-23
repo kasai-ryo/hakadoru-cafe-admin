@@ -60,6 +60,11 @@ const RECOMMENDED_WORK_OPTIONS = [
   "打合せ",
 ];
 
+const SUPABASE_PUBLIC_URL =
+  process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
+const SUPABASE_STORAGE_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "cafeimages";
+
 const CROWD_OPTIONS: { label: string; value: CrowdLevel }[] = [
   { label: "空いている", value: "empty" },
   { label: "普通", value: "normal" },
@@ -258,13 +263,21 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
 
 function createImageState(path?: string | null): ImageUpload | null {
   if (!path) return null;
+  const previewUrl = buildPublicImageUrl(path);
   return {
     id: crypto.randomUUID(),
     storagePath: path,
-    previewUrl: null,
+    previewUrl,
     caption: "",
     fileBase64: null,
   };
+}
+
+function buildPublicImageUrl(path: string) {
+  if (!SUPABASE_PUBLIC_URL) {
+    return null;
+  }
+  return `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${path}`;
 }
 
 export function CafeFormDrawer({
