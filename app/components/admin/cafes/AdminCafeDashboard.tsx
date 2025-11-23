@@ -174,16 +174,46 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
     setDeleteTarget(cafe);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
-    setCafeList((prev) =>
-      prev.map((cafe) =>
-        cafe.id === deleteTarget.id
-          ? { ...cafe, deleted_at: new Date().toISOString() }
-          : cafe,
-      ),
-    );
-    setDeleteTarget(null);
+    try {
+      const response = await fetch(`/api/cafes/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        let errorMessage = "カフェの削除に失敗しました。";
+        try {
+          const errorBody = await response.json();
+          if (
+            Array.isArray(errorBody?.errors) &&
+            errorBody.errors.length > 0
+          ) {
+            errorMessage = errorBody.errors.join("\n");
+          } else if (typeof errorBody?.message === "string") {
+            errorMessage = errorBody.message;
+          }
+        } catch {
+          // ignore JSON parse errors
+        }
+        throw new Error(errorMessage);
+      }
+      const result = (await response.json()) as { data: Cafe };
+      if (!result?.data) {
+        throw new Error("削除結果の解析に失敗しました。");
+      }
+      setCafeList((prev) =>
+        prev.map((cafe) =>
+          cafe.id === deleteTarget.id ? result.data : cafe,
+        ),
+      );
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error("[AdminCafeDashboard] delete failed", error);
+      alert(
+        (error as { message?: string }).message ??
+          "削除処理でエラーが発生しました。",
+      );
+    }
   };
 
   const handleRestore = (cafe: Cafe) => {

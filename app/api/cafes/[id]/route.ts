@@ -142,3 +142,52 @@ export async function PUT(request: Request, context: RouteContext) {
     );
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  context: RouteContext,
+) {
+  const { id: cafeId } = await context.params;
+  if (!cafeId) {
+    return NextResponse.json(
+      { message: "カフェIDが指定されていません。" },
+      { status: 400 },
+    );
+  }
+
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json(
+      { message: "Supabaseの環境変数が設定されていません。" },
+      { status: 500 },
+    );
+  }
+
+  const deletedAt = new Date().toISOString();
+  const { data, error } = await supabase
+    .from("cafes")
+    .update({ deleted_at: deletedAt })
+    .eq("id", cafeId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[cafes:DELETE] Failed to delete cafe", error);
+    return NextResponse.json(
+      {
+        message: "カフェの削除に失敗しました。",
+        detail: String(error.message ?? error),
+      },
+      { status: 500 },
+    );
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { message: "指定されたカフェが見つかりません。" },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({ data: mapCafeRowToCafe(data) }, { status: 200 });
+}
