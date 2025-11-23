@@ -2,11 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import type {
-  Cafe,
-  CafeFormPayload,
-  ImageCategoryKey,
-} from "@/app/types/cafe";
+import type { Cafe, CafeFormPayload } from "@/app/types/cafe";
 import {
   CafeFilterBar,
   type CafeFilterState,
@@ -14,6 +10,7 @@ import {
 import { CafeTable } from "@/app/components/admin/cafes/CafeTable";
 import { CafeFormDrawer } from "@/app/components/admin/cafes/CafeFormDrawer";
 import { CafeDeleteDialog } from "@/app/components/admin/cafes/CafeDeleteDialog";
+import { changePayloadToCafe } from "@/app/api/cafes";
 
 interface AdminCafeDashboardProps {
   cafes: Cafe[];
@@ -109,7 +106,10 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
   };
 
   const handleSave = (payload: CafeFormPayload) => {
-    const updatedCafe = mapPayloadToCafe(payload, editingCafe ?? undefined);
+    const updatedCafe = changePayloadToCafe(
+      payload,
+      editingCafe ?? undefined,
+    );
     if (editingCafe) {
       setCafeList((prev) =>
         prev.map((cafe) => (cafe.id === editingCafe.id ? updatedCafe : cafe)),
@@ -214,90 +214,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
       />
     </section>
   );
-}
-
-function mapPayloadToCafe(payload: CafeFormPayload, base?: Cafe): Cafe {
-  const now = new Date().toISOString();
-  const combinedAddress = [
-    payload.prefecture,
-    payload.addressLine1,
-    payload.addressLine2,
-    payload.addressLine3,
-  ]
-    .filter(Boolean)
-    .join("");
-
-  const images = payload.images;
-
-  return {
-    id: base?.id ?? `draft-${crypto.randomUUID()}`,
-    name: payload.name,
-    facilityType: payload.facilityType,
-    area: payload.area,
-    prefecture: payload.prefecture,
-    postalCode: payload.postalCode,
-    addressLine1: payload.addressLine1,
-    addressLine2: payload.addressLine2,
-    addressLine3: payload.addressLine3,
-    address: combinedAddress,
-    access: payload.access,
-    phone: payload.phone,
-    status: payload.status,
-    timeLimit: payload.timeLimit,
-    hoursWeekdayFrom: payload.hoursWeekdayFrom,
-    hoursWeekdayTo: payload.hoursWeekdayTo,
-    hoursWeekendFrom: payload.hoursWeekendFrom,
-    hoursWeekendTo: payload.hoursWeekendTo,
-    hoursNote: payload.hoursNote,
-    regularHolidays: payload.regularHolidays,
-    seats:
-      typeof payload.seats === "number"
-        ? payload.seats
-        : Number(payload.seats) || 0,
-    wifi: payload.wifi,
-    outlet: payload.outlet,
-    lighting: payload.lighting,
-    meetingRoom: payload.meetingRoom,
-    allowsShortLeave: payload.allowsShortLeave,
-    hasPrivateBooths: payload.hasPrivateBooths,
-    parking: payload.parking,
-    smoking: payload.smoking,
-    coffeePrice: payload.coffeePrice,
-    bringOwnFood: payload.bringOwnFood,
-    alcohol: payload.alcohol,
-    services: payload.services,
-    paymentMethods: payload.paymentMethods,
-    customerTypes: payload.customerTypes,
-    crowdMatrix: payload.crowdMatrix,
-    ambienceCasual: payload.ambienceCasual,
-    ambienceModern: payload.ambienceModern,
-    ambassadorComment: payload.ambassadorComment,
-    website: payload.website,
-    imageMainPath: images.main?.storagePath || base?.imageMainPath || "",
-    imageExteriorPath:
-      images.exterior?.storagePath || base?.imageExteriorPath || "",
-    imageInteriorPath:
-      images.interior?.storagePath || base?.imageInteriorPath || "",
-    imagePowerPath:
-      images.power?.storagePath || base?.imagePowerPath || "",
-    imageDrinkPath:
-      images.drink?.storagePath || base?.imageDrinkPath || "",
-    imageFoodPath:
-      images.food?.storagePath || base?.imageFoodPath || undefined,
-    imageOtherPaths: (() => {
-      const next: string[] = [];
-      for (let i = 1; i <= 10; i += 1) {
-        const key = `other${i}` as ImageCategoryKey;
-        const path = images[key]?.storagePath;
-        if (path) {
-          next.push(path);
-        }
-      }
-      return next;
-    })(),
-    deleted_at: base?.deleted_at ?? null,
-    updated_at: now,
-  };
 }
 
 interface LoginFormProps {

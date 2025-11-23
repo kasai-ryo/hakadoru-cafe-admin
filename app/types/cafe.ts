@@ -43,6 +43,7 @@ export interface ImageUpload {
   storagePath: string;
   previewUrl: string | null;
   caption: string;
+  fileBase64?: string | null;
 }
 
 export interface Cafe {
