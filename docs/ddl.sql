@@ -109,8 +109,7 @@ CREATE TABLE cafes (
   website TEXT,
   phone VARCHAR(20),
   seats INT,
-  seats INT,
-  wifi BOOLEAN DEFAULT FALSE,
+  wifi BOOLEAN NOT NULL DEFAULT FALSE,
   outlet VARCHAR(20) CHECK (outlet IN ('all', 'most', 'half', 'some', 'none')),
   lighting VARCHAR(20) CHECK (lighting IN ('dark', 'normal', 'bright')),
   meeting_room BOOLEAN DEFAULT FALSE,
@@ -121,9 +120,9 @@ CREATE TABLE cafes (
   coffee_price INT,
   bring_own_food VARCHAR(30) CHECK (bring_own_food IN ('allowed', 'not_allowed', 'drinks_only')),
   alcohol VARCHAR(30) CHECK (alcohol IN ('available', 'night_only', 'unavailable')),
-  services JSONB,
-  payment_methods JSONB,
-  customer_types JSONB,
+  services JSONB NOT NULL DEFAULT '[]'::jsonb,
+  payment_methods JSONB NOT NULL DEFAULT '[]'::jsonb,
+  customer_types JSONB NOT NULL DEFAULT '[]'::jsonb,
   recommended_work JSONB NOT NULL DEFAULT '[]'::jsonb,
   crowd_levels JSONB NOT NULL DEFAULT '{
     "weekdayMorning":"normal",
@@ -143,6 +142,7 @@ CREATE TABLE cafes (
   image_drink_path TEXT NOT NULL,
   image_food_path TEXT,
   image_other_paths JSONB NOT NULL DEFAULT '[]'::jsonb,
+  deleted_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -204,6 +204,7 @@ COMMENT ON COLUMN cafes.image_power_path IS '電源席画像パス';
 COMMENT ON COLUMN cafes.image_drink_path IS 'ドリンク画像パス';
 COMMENT ON COLUMN cafes.image_food_path IS 'フード画像パス';
 COMMENT ON COLUMN cafes.image_other_paths IS 'その他画像パス（配列）';
+COMMENT ON COLUMN cafes.deleted_at IS '論理削除日時（NULL=公開中）';
 
 -- ==================================================
 -- 5. reports (作業報告)

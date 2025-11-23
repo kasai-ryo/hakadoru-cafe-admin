@@ -259,6 +259,7 @@ function createImageState(path?: string | null): ImageUpload | null {
     storagePath: path,
     previewUrl: null,
     caption: "",
+    fileBase64: null,
   };
 }
 
@@ -270,7 +271,7 @@ export function CafeFormDrawer({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (payload: CafeFormPayload) => void;
+  onSubmit: (payload: CafeFormPayload) => Promise<void>;
   editingCafe: Cafe | null;
 }) {
   const [formState, setFormState] = useState<CafeFormPayload>(
@@ -282,6 +283,7 @@ export function CafeFormDrawer({
     useState<PostalLookupFeedback>(null);
   const [isPostalLookupLoading, setIsPostalLookupLoading] =
     useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -366,7 +368,10 @@ export function CafeFormDrawer({
     }));
   };
 
-  const updateImage = (category: ImageCategoryKey, updater: ImageUpload | null) => {
+  const updateImage = (
+    category: ImageCategoryKey,
+    updater: ImageUpload | null,
+  ) => {
     setFormState((prev) => ({
       ...prev,
       images: {
@@ -381,14 +386,45 @@ export function CafeFormDrawer({
     if (prev?.previewUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(prev.previewUrl);
     }
-    const storagePath = generateStoragePath(formState.name, category, file.name);
+    const storagePath = generateStoragePath(
+      formState.name,
+      category,
+      file.name,
+    );
     const previewUrl = URL.createObjectURL(file);
-    updateImage(category, {
+    const baseEntry: ImageUpload = {
       id: prev?.id ?? crypto.randomUUID(),
       storagePath,
       previewUrl,
       caption: prev?.caption ?? "",
-    });
+      fileBase64: null,
+    };
+    updateImage(category, baseEntry);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        console.error("画像の読み込みに失敗しました。");
+        return;
+      }
+      setFormState((prevState) => {
+        const current = prevState.images[category];
+        if (!current) {
+          return prevState;
+        }
+        return {
+          ...prevState,
+          images: {
+            ...prevState.images,
+            [category]: { ...current, fileBase64: reader.result },
+          },
+        };
+      });
+    };
+    reader.onerror = () => {
+      console.error("画像の読み込みに失敗しました。");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleImageCaption = (category: ImageCategoryKey, caption: string) => {
@@ -416,7 +452,7 @@ export function CafeFormDrawer({
     setCurrentStep(1);
   };
 
-  const handleImageNext = () => {
+  const handleImageNext = async () => {
     const requiredFields: Array<keyof CafeFormPayload> = [
       "name",
       "area",
@@ -437,9 +473,20 @@ export function CafeFormDrawer({
       setError("必須の画像カテゴリをすべて登録してください。");
       return;
     }
-    onSubmit(formState);
     setError("");
-    setCurrentStep(2);
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formState);
+      setCurrentStep(2);
+    } catch (submitError) {
+      console.error("[CafeFormDrawer] Failed to submit form", submitError);
+      const message =
+        (submitError as { message?: string }).message ??
+        "登録処理でエラーが発生しました。時間をおいて再度お試しください。";
+      setError(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleRestart = () => {
@@ -447,6 +494,7 @@ export function CafeFormDrawer({
     setCurrentStep(0);
     setError("");
     setPostalLookupFeedback(null);
+    setIsSubmitting(false);
   };
 
   const stepLabels = useMemo(
@@ -615,10 +663,20 @@ export function CafeFormDrawer({
                 </button>
                 <button
                   type="button"
-                  className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
+                  className={`rounded-lg px-5 py-2 text-sm font-semibold text-white ${isSubmitting
+                      ? "cursor-not-allowed bg-gray-400"
+                      : "bg-primary hover:bg-primary-dark"
+                    }`}
                   onClick={handleImageNext}
+                  disabled={isSubmitting}
                 >
-                  {editingCafe ? "更新する" : "登録する"}
+                  {isSubmitting
+                    ? editingCafe
+                      ? "更新中..."
+                      : "登録中..."
+                    : editingCafe
+                      ? "更新する"
+                      : "登録する"}
                 </button>
               </div>
             )}

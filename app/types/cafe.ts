@@ -9,7 +9,7 @@ export type SmokingOption =
   | "allowed";
 export type BringOwnFoodOption = "allowed" | "not_allowed" | "drinks_only";
 export type AlcoholOption = "available" | "night_only" | "unavailable";
-export type CrowdLevel = "empty" | "normal" | "crowded";
+export type CrowdLevel = "empty" | "normal" | "crowded" | "unknown";
 
 export interface CrowdMatrix {
   weekdayMorning: CrowdLevel;

@@ -105,18 +105,43 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
     setIsDrawerOpen(true);
   };
 
-  const handleSave = (payload: CafeFormPayload) => {
-    const updatedCafe = changePayloadToCafe(
-      payload,
-      editingCafe ?? undefined,
-    );
+  const handleSave = async (payload: CafeFormPayload) => {
     if (editingCafe) {
+      const updatedCafe = changePayloadToCafe(payload, editingCafe);
       setCafeList((prev) =>
         prev.map((cafe) => (cafe.id === editingCafe.id ? updatedCafe : cafe)),
       );
-    } else {
-      setCafeList((prev) => [updatedCafe, ...prev]);
+      return;
     }
+
+    const response = await fetch("/api/cafes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      let errorMessage = "カフェの登録に失敗しました。";
+      try {
+        const errorBody = await response.json();
+        if (Array.isArray(errorBody?.errors) && errorBody.errors.length > 0) {
+          errorMessage = errorBody.errors.join("\n");
+        } else if (typeof errorBody?.message === "string") {
+          errorMessage = errorBody.message;
+        }
+      } catch {
+        // ignore JSON parse errors
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = (await response.json()) as { data: Cafe };
+    if (!result?.data) {
+      throw new Error("登録結果の解析に失敗しました。");
+    }
+    setCafeList((prev) => [result.data, ...prev]);
   };
 
   const handleRequestDelete = (cafe: Cafe) => {

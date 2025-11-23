@@ -17,7 +17,7 @@ INSERT INTO cafes (
   crowd_levels,
   ambience_casual, ambience_modern, ambassador_comment,
   image_main_path, image_exterior_path, image_interior_path, image_power_path, image_drink_path, image_food_path, image_other_paths,
-  created_at, updated_at
+  deleted_at, created_at, updated_at
 ) VALUES
 (
   'cafe0000-0000-0000-0000-000000000001',
@@ -63,6 +63,7 @@ INSERT INTO cafes (
   '/images/cafe/drink-default.jpg',
   '/images/cafe/food-default.jpg',
   '[]',
+  NULL,
   NOW(), NOW()
 ),
 (
@@ -109,6 +110,7 @@ INSERT INTO cafes (
   '/images/cafe/drink-default.jpg',
   '/images/cafe/food-default.jpg',
   '[]',
+  NULL,
   NOW(), NOW()
 ),
 (
@@ -155,6 +157,7 @@ INSERT INTO cafes (
   '/images/cafe/drink-default.jpg',
   NULL,
   '[]',
+  NULL,
   NOW(), NOW()
 ),
 (
@@ -201,6 +204,7 @@ INSERT INTO cafes (
   '/images/cafe/drink-default.jpg',
   '/images/cafe/food-default.jpg',
   '[]',
+  NULL,
   NOW(), NOW()
 ),
 (
@@ -247,6 +251,7 @@ INSERT INTO cafes (
   '/images/cafe/drink-default.jpg',
   '/images/cafe/food-default.jpg',
   '[]',
+  NULL,
   NOW(), NOW()
 ),
 (
@@ -293,6 +298,7 @@ INSERT INTO cafes (
   '/images/cafe/drink-default.jpg',
   '/images/cafe/food-default.jpg',
   '[]',
+  NULL,
   NOW(), NOW()
 ),
 (
@@ -339,6 +345,7 @@ INSERT INTO cafes (
   '/images/cafe/drink-default.jpg',
   '/images/cafe/food-default.jpg',
   '[]',
+  NULL,
   NOW(), NOW()
 ),
 (
@@ -385,5 +392,6 @@ INSERT INTO cafes (
   '/images/cafe/drink-default.jpg',
   '/images/cafe/food-default.jpg',
   '[]',
+  NULL,
   NOW(), NOW()
 );
