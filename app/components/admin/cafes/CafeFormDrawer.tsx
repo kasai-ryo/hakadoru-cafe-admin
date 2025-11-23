@@ -135,6 +135,13 @@ const createEmptyImages = (): Record<
   other10: null,
 });
 
+type PostalLookupFeedback =
+  | {
+      type: "success" | "error";
+      message: string;
+    }
+  | null;
+
 const createEmptyForm = (): CafeFormPayload => ({
   name: "",
   facilityType: "cafe",
@@ -264,6 +271,10 @@ export function CafeFormDrawer({
   );
   const [currentStep, setCurrentStep] = useState(0);
   const [error, setError] = useState("");
+  const [postalLookupFeedback, setPostalLookupFeedback] =
+    useState<PostalLookupFeedback>(null);
+  const [isPostalLookupLoading, setIsPostalLookupLoading] =
+    useState(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -276,6 +287,8 @@ export function CafeFormDrawer({
     }
     setCurrentStep(0);
     setError("");
+    setPostalLookupFeedback(null);
+    setIsPostalLookupLoading(false);
   }, [isOpen, editingCafe]);
 
   useEffect(() => {
@@ -426,6 +439,7 @@ export function CafeFormDrawer({
     setFormState(createEmptyForm());
     setCurrentStep(0);
     setError("");
+    setPostalLookupFeedback(null);
   };
 
   const stepLabels = useMemo(
@@ -436,6 +450,51 @@ export function CafeFormDrawer({
     ],
     [editingCafe],
   );
+
+  const handlePostalLookup = async () => {
+    const normalized = formState.postalCode.replace(/[^\d]/g, "");
+    if (normalized.length !== 7) {
+      setPostalLookupFeedback({
+        type: "error",
+        message: "郵便番号はハイフンなしの7桁で入力してください。",
+      });
+      return;
+    }
+    setIsPostalLookupLoading(true);
+    setPostalLookupFeedback(null);
+    try {
+      const response = await fetch(
+        `https://zipcloud.ibsnet.co.jp/api/search?zipcode=${normalized}`,
+      );
+      const data = await response.json();
+      if (data.status !== 200 || !data.results?.length) {
+        setPostalLookupFeedback({
+          type: "error",
+          message: "住所情報を取得できませんでした。手入力してください。",
+        });
+        return;
+      }
+      const result = data.results[0];
+      setFormState((prev) => ({
+        ...prev,
+        prefecture: result.address1 || prev.prefecture,
+        addressLine1: result.address2 || prev.addressLine1,
+        addressLine2: result.address3 || prev.addressLine2,
+      }));
+      setPostalLookupFeedback({
+        type: "success",
+        message: "郵便番号から住所を自動入力しました。",
+      });
+    } catch (lookupError) {
+      setPostalLookupFeedback({
+        type: "error",
+        message: "住所検索中にエラーが発生しました。時間をおいて再度お試しください。",
+      });
+      console.error(lookupError);
+    } finally {
+      setIsPostalLookupLoading(false);
+    }
+  };
 
   return (
     <>
@@ -489,6 +548,9 @@ export function CafeFormDrawer({
                 onChipToggle={handleChipToggle}
                 onHolidayToggle={handleHolidayToggle}
                 onCrowdChange={handleCrowdChange}
+                onPostalLookup={handlePostalLookup}
+                postalLookupFeedback={postalLookupFeedback}
+                postalLookupLoading={isPostalLookupLoading}
               />
             )}
 
@@ -585,6 +647,9 @@ function InfoStep({
   onChipToggle,
   onHolidayToggle,
   onCrowdChange,
+  onPostalLookup,
+  postalLookupFeedback,
+  postalLookupLoading,
 }: {
   formState: CafeFormPayload;
   onChange: <K extends keyof CafeFormPayload>(
@@ -601,6 +666,9 @@ function InfoStep({
   ) => void;
   onHolidayToggle: (day: string) => void;
   onCrowdChange: (slot: keyof CrowdMatrix, value: CrowdLevel) => void;
+  onPostalLookup: () => void;
+  postalLookupFeedback: PostalLookupFeedback;
+  postalLookupLoading: boolean;
 }) {
   return (
     <div className="space-y-8">
@@ -674,12 +742,36 @@ function InfoStep({
 
       <Section title="住所情報">
         <div className="grid gap-4 md:grid-cols-3">
-          <TextField
-            label="郵便番号"
-            placeholder="例: 103-0027"
-            value={formState.postalCode}
-            onChange={(value) => onChange("postalCode", value)}
-          />
+          <div className="space-y-2">
+            <TextField
+              label="郵便番号"
+              placeholder="例: 103-0027"
+              value={formState.postalCode}
+              onChange={(value) => onChange("postalCode", value)}
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={onPostalLookup}
+                disabled={postalLookupLoading}
+                className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {postalLookupLoading
+                  ? "住所を検索中..."
+                  : "郵便番号から住所を自動入力"}
+              </button>
+            </div>
+            {postalLookupFeedback && (
+              <p
+                className={`text-xs ${postalLookupFeedback.type === "success"
+                    ? "text-emerald-600"
+                    : "text-red-500"
+                  }`}
+              >
+                {postalLookupFeedback.message}
+              </p>
+            )}
+          </div>
           <TextField
             label="住所1（市区）"
             required
