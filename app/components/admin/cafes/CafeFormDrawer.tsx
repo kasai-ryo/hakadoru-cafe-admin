@@ -85,11 +85,17 @@ const IMAGE_CATEGORIES: Array<{
   key: ImageCategoryKey;
   label: string;
   required: boolean;
+  note?: string;
 }> = [
-    { key: "main", label: "メイン画像", required: true },
+    {
+      key: "main",
+      label: "メイン画像",
+      required: true,
+      note: "※サムネイルに利用されます",
+    },
     { key: "exterior", label: "外観", required: true },
     { key: "interior", label: "内観", required: true },
-    { key: "power", label: "電源席", required: true },
+    { key: "power", label: "電源席", required: true, note: "※電源タップが見えるような画像を登録してください", },
     { key: "drink", label: "ドリンク", required: true },
     { key: "food", label: "フード", required: false },
     { key: "other1", label: "その他1", required: false },
@@ -137,9 +143,9 @@ const createEmptyImages = (): Record<
 
 type PostalLookupFeedback =
   | {
-      type: "success" | "error";
-      message: string;
-    }
+    type: "success" | "error";
+    message: string;
+  }
   | null;
 
 const createEmptyForm = (): CafeFormPayload => ({
@@ -706,7 +712,7 @@ function InfoStep({
             onChange={(value) => onChange("prefecture", value)}
           />
           <TextField
-            label="電話番号（任意）"
+            label="電話番号"
             value={formState.phone}
             placeholder="例: 03-1234-5678"
             onChange={(value) => onChange("phone", value)}
@@ -764,8 +770,8 @@ function InfoStep({
             {postalLookupFeedback && (
               <p
                 className={`text-xs ${postalLookupFeedback.type === "success"
-                    ? "text-emerald-600"
-                    : "text-red-500"
+                  ? "text-emerald-600"
+                  : "text-red-500"
                   }`}
               >
                 {postalLookupFeedback.message}
@@ -874,6 +880,7 @@ function InfoStep({
           />
           <SelectField
             label="電源状況"
+            required
             options={[
               { label: "全席", value: "all" },
               { label: "8割", value: "most" },
@@ -902,11 +909,13 @@ function InfoStep({
         <div className="grid gap-4 md:grid-cols-3">
           <SelectField
             label="禁煙・喫煙"
+            required
             options={[
               { label: "全席禁煙", value: "no_smoking" },
               { label: "分煙", value: "separated" },
               { label: "電子タバコ可", value: "e_cigarette" },
               { label: "喫煙可", value: "allowed" },
+              { label: "不明", value: "unknown" },
             ]}
             value={formState.smoking}
             onChange={(value) =>
@@ -915,10 +924,12 @@ function InfoStep({
           />
           <SelectField
             label="飲食物持込"
+            required
             options={[
               { label: "可能", value: "allowed" },
               { label: "不可", value: "not_allowed" },
               { label: "飲み物のみ可", value: "drinks_only" },
+              { label: "不明", value: "unknown" },
             ]}
             value={formState.bringOwnFood}
             onChange={(value) =>
@@ -930,10 +941,12 @@ function InfoStep({
           />
           <SelectField
             label="アルコール提供"
+            required
             options={[
               { label: "あり", value: "available" },
               { label: "夜のみあり", value: "night_only" },
               { label: "なし", value: "unavailable" },
+              { label: "不明", value: "unknown" },
             ]}
             value={formState.alcohol}
             onChange={(value) =>
@@ -1033,7 +1046,7 @@ function ImageStep({
         </p>
         <p className="text-xs text-gray-500">※画像最小サイズ：800 × 600</p>
         <p className="text-xs text-gray-500">
-          Supabase バケットのパスはアップロード処理で自動生成されます。
+          ※アップロード可能形式：JPEG / PNG / WebP、ファイルサイズは5MB以下
         </p>
       </section>
 
@@ -1043,6 +1056,7 @@ function ImageStep({
             key={category.key}
             label={category.label}
             required={category.required}
+            note={category.note}
             entry={formState.images[category.key]}
             onFile={(file) => onFile(category.key, file)}
             onCaption={(caption) => onCaption(category.key, caption)}
@@ -1057,6 +1071,7 @@ function ImageStep({
 function ImageUploadCard({
   label,
   required,
+  note,
   entry,
   onFile,
   onCaption,
@@ -1064,6 +1079,7 @@ function ImageUploadCard({
 }: {
   label: string;
   required?: boolean;
+  note?: string;
   entry: ImageUpload | null;
   onFile: (file: File) => void;
   onCaption: (caption: string) => void;
@@ -1076,12 +1092,21 @@ function ImageUploadCard({
         <p className="text-sm font-semibold text-gray-800">
           {label}
           {required && <span className="ml-1 text-red-500">*</span>}
+          {note && (
+            <span className="ml-2 text-xs font-normal text-gray-500">
+              {note}
+            </span>
+          )}
         </p>
-        {onClear && entry && (
+        {onClear && (
           <button
             type="button"
-            className="text-xs text-gray-500 underline"
-            onClick={onClear}
+            className={`text-xs ${entry
+              ? "text-gray-500 underline"
+              : "cursor-not-allowed text-gray-300"
+              }`}
+            onClick={() => entry && onClear()}
+            disabled={!entry}
           >
             クリア
           </button>
@@ -1128,7 +1153,7 @@ function ImageUploadCard({
         <input
           type="text"
           className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
-          placeholder="キャプション（任意）"
+          placeholder="キャプション"
           value={entry?.caption ?? ""}
           disabled={!entry}
           onChange={(event) => onCaption(event.target.value)}
