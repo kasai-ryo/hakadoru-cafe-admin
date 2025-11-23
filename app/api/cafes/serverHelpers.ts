@@ -159,6 +159,7 @@ export function buildCafeImageInsertRows(
     image_url: string;
     image_type: ImageCategoryKey;
     display_order: number;
+    caption: string | null;
   }> = [];
   ALL_IMAGE_CATEGORIES.forEach((category, index) => {
     const path = payload.images[category]?.storagePath;
@@ -168,6 +169,7 @@ export function buildCafeImageInsertRows(
         image_url: path,
         image_type: category,
         display_order: index + 1,
+        caption: payload.images[category]?.caption || null,
       });
     }
   });

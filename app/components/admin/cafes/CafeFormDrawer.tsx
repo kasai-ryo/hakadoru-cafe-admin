@@ -102,7 +102,7 @@ const IMAGE_CATEGORIES: Array<{
     { key: "exterior", label: "外観", required: true },
     { key: "interior", label: "内観", required: true },
     { key: "power", label: "電源席", required: true, note: "※電源タップが見えるような画像を登録してください", },
-    { key: "drink", label: "ドリンク", required: true },
+    { key: "drink", label: "ドリンク", required: false },
     { key: "food", label: "フード", required: false },
     { key: "other1", label: "その他1", required: false },
     { key: "other2", label: "その他2", required: false },
@@ -681,8 +681,8 @@ export function CafeFormDrawer({
                 <button
                   type="button"
                   className={`rounded-lg px-5 py-2 text-sm font-semibold text-white ${isSubmitting
-                      ? "cursor-not-allowed bg-gray-400"
-                      : "bg-primary hover:bg-primary-dark"
+                    ? "cursor-not-allowed bg-gray-400"
+                    : "bg-primary hover:bg-primary-dark"
                     }`}
                   onClick={handleImageNext}
                   disabled={isSubmitting}

@@ -374,6 +374,7 @@ CREATE TABLE cafe_images (
     )
   ),
   display_order INT DEFAULT 0,
+  caption TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -387,6 +388,7 @@ COMMENT ON COLUMN cafe_images.cafe_id IS 'カフェID';
 COMMENT ON COLUMN cafe_images.image_url IS '画像URL（Supabase Storage）';
 COMMENT ON COLUMN cafe_images.image_type IS '画像種別（main/exterior/interior/power/drink/food/other1-10）';
 COMMENT ON COLUMN cafe_images.display_order IS '表示順';
+COMMENT ON COLUMN cafe_images.caption IS '画像キャプション';
 
 -- ==================================================
 -- 10. notifications (通知)
