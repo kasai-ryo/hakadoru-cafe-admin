@@ -87,6 +87,7 @@ export async function POST(request: Request) {
   let payload: CafeFormPayload;
   try {
     payload = (await request.json()) as CafeFormPayload;
+    console.log("ペイロード:", payload)
   } catch (error) {
     return NextResponse.json(
       { message: "JSONの解析に失敗しました", detail: String(error) },
