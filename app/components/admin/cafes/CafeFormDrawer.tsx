@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import areas from "@/app/data/areas.json";
 import prefectures from "@/app/data/prefectures.json";
 import type {
@@ -46,7 +46,6 @@ const PAYMENT_OPTIONS = ["現金", "クレカ", "QR決済", "交通系IC"];
 const CUSTOMER_TYPES = [
   "学生",
   "会社員",
-  "フリーランス",
   "ファミリー",
   "観光客",
   "女子会",
@@ -427,11 +426,6 @@ function buildPublicImageUrl(path: string) {
   return `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${path}`;
 }
 
-function scrollToTop() {
-  if (typeof window === "undefined") return;
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
 export function CafeFormDrawer({
   isOpen,
   onClose,
@@ -453,6 +447,17 @@ export function CafeFormDrawer({
   const [isPostalLookupLoading, setIsPostalLookupLoading] =
     useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  const scrollDrawerToTop = () => {
+    if (contentRef.current) {
+      contentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -502,12 +507,10 @@ export function CafeFormDrawer({
     saveDraft(formState, editingCafe, isOpen);
   }, [formState, editingCafe, isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [currentStep, isOpen]);
+  const jumpToStep = (step: number) => {
+    setCurrentStep(step);
+    scrollDrawerToTop();
+  };
 
   const handleChange = <K extends keyof CafeFormPayload>(
     key: K,
@@ -636,13 +639,12 @@ export function CafeFormDrawer({
   const handleStepChange = (step: number) => {
     if (step >= 2) return;
     setError("");
-    setCurrentStep(step);
+    jumpToStep(step);
   };
 
   const handleBasicNext = () => {
     setError("");
-    setCurrentStep(1);
-    scrollToTop();
+    jumpToStep(1);
   };
 
   const handleImageNext = async () => {
@@ -659,8 +661,7 @@ export function CafeFormDrawer({
         (key) => `${REQUIRED_FIELD_LABELS[key]}は必須入力です`,
       );
       setError(messages.join("\n"));
-      setCurrentStep(0);
-      scrollToTop();
+      jumpToStep(0);
       return;
     }
     const missingImages = IMAGE_CATEGORIES.filter(
@@ -671,7 +672,7 @@ export function CafeFormDrawer({
         (category) => `${category.label}は必須入力です`,
       );
       setError(imageMessages.join("\n"));
-      scrollToTop();
+      scrollDrawerToTop();
       return;
     }
     setError("");
@@ -681,7 +682,7 @@ export function CafeFormDrawer({
     try {
       await onSubmit(payloadToSubmit);
       clearDraft(editingCafe);
-      setCurrentStep(2);
+      jumpToStep(2);
     } catch (submitError) {
       console.error("[CafeFormDrawer] Failed to submit form", submitError);
       const message =
@@ -696,7 +697,7 @@ export function CafeFormDrawer({
   const handleRestart = () => {
     clearDraft(editingCafe);
     setFormState(createEmptyForm());
-    setCurrentStep(0);
+    jumpToStep(0);
     setError("");
     setPostalLookupFeedback(null);
     setIsSubmitting(false);
@@ -800,7 +801,7 @@ export function CafeFormDrawer({
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-6 py-6">
+          <div className="flex-1 overflow-y-auto px-6 py-6" ref={contentRef}>
             {currentStep === 0 && (
               <InfoStep
                 formState={formState}
@@ -862,7 +863,7 @@ export function CafeFormDrawer({
                 <button
                   type="button"
                   className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                  onClick={() => setCurrentStep(0)}
+                  onClick={() => jumpToStep(0)}
                 >
                   情報入力に戻る
                 </button>

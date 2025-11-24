@@ -34,7 +34,14 @@ export function CafeTable({ cafes }: CafeTableProps) {
           {cafes.map((cafe) => (
             <tr key={cafe.id}>
               <td className="px-4 py-4">
-                <div className="font-semibold text-gray-900">{cafe.name}</div>
+                <div className="font-semibold text-gray-900">
+                  <Link
+                    href={`/admin/cafes/${cafe.id}`}
+                    className="text-primary hover:underline"
+                  >
+                    {cafe.name}
+                  </Link>
+                </div>
                 <div className="mt-1 text-xs text-gray-500">{cafe.area}</div>
               </td>
               <td className="px-4 py-4">
