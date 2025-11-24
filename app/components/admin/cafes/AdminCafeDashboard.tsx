@@ -58,14 +58,16 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
       if (filters.area !== "all" && cafe.area !== filters.area) {
         return false;
       }
-      if (filters.status !== "all" && cafe.status !== filters.status) {
-        return false;
+      if (filters.status !== "all") {
+        if (filters.status === "deleted") {
+          return Boolean(cafe.deleted_at);
+        }
+        if (cafe.status !== filters.status) {
+          return false;
+        }
       }
       if (filters.wifiOnly && !cafe.wifi) {
         return false;
-      }
-      if (filters.status === "deleted") {
-        return Boolean(cafe.deleted_at);
       }
       return true;
     });

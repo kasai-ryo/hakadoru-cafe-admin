@@ -648,7 +648,7 @@ export function CafeFormDrawer({
   };
 
   const handleImageNext = async () => {
-    const requiredFields: Array<keyof CafeFormPayload> = [
+    const requiredFields: Array<keyof typeof REQUIRED_FIELD_LABELS> = [
       "name",
       "area",
       "prefecture",

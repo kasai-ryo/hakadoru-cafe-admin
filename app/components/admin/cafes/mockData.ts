@@ -56,6 +56,7 @@ export const mockCafes: Cafe[] = [
     services: ["テラス席あり", "窓際席あり", "充電器貸出あり"],
     paymentMethods: ["現金", "クレカ", "交通系IC"],
     customerTypes: ["ビジネス", "学生"],
+    recommendedWorkStyles: ["PC作業", "オンライン会議"],
     crowdMatrix: baseCrowd({
       weekdayMorning: "empty",
       weekdayAfternoon: "normal",
@@ -65,6 +66,8 @@ export const mockCafes: Cafe[] = [
     ambassadorComment:
       "朝は静かで集中しやすい。\n電源席が多く、オンライン会議にも向いています。",
     website: "https://example.com/nihonbashi",
+    latitude: 35.682,
+    longitude: 139.772,
     imageMainPath: "cafes/cafe-001/main.jpg",
     imageExteriorPath: "cafes/cafe-001/exterior.jpg",
     imageInteriorPath: "cafes/cafe-001/interior.jpg",
@@ -120,6 +123,7 @@ export const mockCafes: Cafe[] = [
     services: ["個室ブース", "24h営業", "モニター貸出あり", "ブランケット貸出あり"],
     paymentMethods: ["クレカ", "QR決済"],
     customerTypes: ["ビジネス", "フリーランス"],
+    recommendedWorkStyles: ["深夜作業", "ブレスト"],
     crowdMatrix: baseCrowd({
       weekdayEvening: "normal",
       weekendMorning: "normal",
@@ -128,6 +132,8 @@ export const mockCafes: Cafe[] = [
     ambienceModern: 5,
     ambassadorComment: "夜間の静けさが抜群。24h営業でナイトワーカー向き。",
     website: "https://example.com/shibuya",
+    latitude: 35.659,
+    longitude: 139.703,
     imageMainPath: "cafes/cafe-002/main.jpg",
     imageExteriorPath: "cafes/cafe-002/exterior.jpg",
     imageInteriorPath: "cafes/cafe-002/interior.jpg",
@@ -183,6 +189,7 @@ export const mockCafes: Cafe[] = [
     services: ["テイクアウト"],
     paymentMethods: ["現金"],
     customerTypes: ["地元"],
+    recommendedWorkStyles: ["読書", "集中作業"],
     crowdMatrix: baseCrowd({
       weekdayMorning: "normal",
       weekdayAfternoon: "empty",
@@ -193,6 +200,8 @@ export const mockCafes: Cafe[] = [
     ambassadorComment:
       "照明が抑えめで夜におすすめ。\n静かさを重視したい人向け。",
     website: "https://example.com/ogikubo",
+    latitude: 35.704,
+    longitude: 139.621,
     imageMainPath: "cafes/cafe-003/main.jpg",
     imageExteriorPath: "cafes/cafe-003/exterior.jpg",
     imageInteriorPath: "cafes/cafe-003/interior.jpg",

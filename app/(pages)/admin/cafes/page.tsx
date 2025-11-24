@@ -16,7 +16,7 @@ export default async function AdminCafesPage() {
     if (error) {
       console.error("[admin/cafes] Failed to fetch cafes", error);
     } else if (data) {
-      cafes = data.map(mapCafeRowToCafe);
+      cafes = data.map((row) => mapCafeRowToCafe(row));
     }
   }
 
