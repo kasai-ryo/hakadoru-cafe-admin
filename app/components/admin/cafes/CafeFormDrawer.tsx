@@ -64,6 +64,18 @@ const SUPABASE_PUBLIC_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
 const SUPABASE_STORAGE_BUCKET =
   process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "cafeimages";
+const CREATE_DRAFT_KEY = "admin-cafe-form-draft";
+const EDIT_DRAFT_PREFIX = "admin-cafe-form-edit-";
+
+type SerializedImageUpload = {
+  id: string;
+  storagePath: string | null;
+  caption: string;
+};
+
+type SerializedFormState = Omit<CafeFormPayload, "images"> & {
+  images: Record<ImageCategoryKey, SerializedImageUpload | null>;
+};
 
 const CROWD_OPTIONS: { label: string; value: CrowdLevel }[] = [
   { label: "空いている", value: "empty" },
@@ -273,6 +285,91 @@ function createImageState(path?: string | null): ImageUpload | null {
   };
 }
 
+function serializeFormState(state: CafeFormPayload): SerializedFormState {
+  const images = {} as SerializedFormState["images"];
+  IMAGE_CATEGORIES.forEach(({ key }) => {
+    const entry = state.images[key];
+    if (!entry) {
+      images[key] = null;
+    } else {
+      images[key] = {
+        id: entry.id,
+        storagePath: entry.storagePath ?? null,
+        caption: entry.caption ?? "",
+      };
+    }
+  });
+  const { images: _omitImages, ...rest } = state;
+  return {
+    ...rest,
+    images,
+  };
+}
+
+function deserializeFormState(serialized: SerializedFormState): CafeFormPayload {
+  const base = createEmptyForm();
+  const next: CafeFormPayload = {
+    ...base,
+    ...serialized,
+    images: { ...base.images },
+  };
+  IMAGE_CATEGORIES.forEach(({ key }) => {
+    const entry = serialized.images[key];
+    if (!entry || !entry.storagePath) {
+      next.images[key] = null;
+    } else {
+      next.images[key] = {
+        id: entry.id ?? crypto.randomUUID(),
+        storagePath: entry.storagePath,
+        previewUrl: buildPublicImageUrl(entry.storagePath),
+        caption: entry.caption ?? "",
+        fileBase64: null,
+      };
+    }
+  });
+  return next;
+}
+
+function getDraftStorageKey(editingCafe: Cafe | null) {
+  return editingCafe ? `${EDIT_DRAFT_PREFIX}${editingCafe.id}` : CREATE_DRAFT_KEY;
+}
+
+function saveDraft(
+  state: CafeFormPayload,
+  editingCafe: Cafe | null,
+  isOpen: boolean,
+) {
+  if (typeof window === "undefined") return;
+  if (!isOpen) return;
+  const key = getDraftStorageKey(editingCafe);
+  const serialized = serializeFormState(state);
+  try {
+    window.localStorage.setItem(key, JSON.stringify(serialized));
+  } catch (error) {
+    console.error("[CafeFormDrawer] Failed to save draft", error);
+  }
+}
+
+function loadDraft(editingCafe: Cafe | null): CafeFormPayload | null {
+  if (typeof window === "undefined") return null;
+  const key = getDraftStorageKey(editingCafe);
+  const raw = window.localStorage.getItem(key);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as SerializedFormState;
+    return deserializeFormState(parsed);
+  } catch (error) {
+    console.error("[CafeFormDrawer] Failed to parse draft", error);
+    return null;
+  }
+}
+
+function clearDraft(editingCafe: Cafe | null) {
+  if (typeof window === "undefined") return;
+  const key = getDraftStorageKey(editingCafe);
+  window.localStorage.removeItem(key);
+}
+
 function buildPublicImageUrl(path: string) {
   if (!SUPABASE_PUBLIC_URL) {
     return null;
@@ -307,9 +404,15 @@ export function CafeFormDrawer({
       return;
     }
     if (editingCafe) {
-      setFormState(mapCafeToFormPayload(editingCafe));
+      const draft = loadDraft(editingCafe);
+      if (draft) {
+        setFormState(draft);
+      } else {
+        setFormState(mapCafeToFormPayload(editingCafe));
+      }
     } else {
-      setFormState(createEmptyForm());
+      const draft = loadDraft(null);
+      setFormState(draft ?? createEmptyForm());
     }
     setCurrentStep(0);
     setError("");
@@ -339,6 +442,10 @@ export function CafeFormDrawer({
       }
     });
   }, [isOpen, formState.images]);
+
+useEffect(() => {
+  saveDraft(formState, editingCafe, isOpen);
+}, [formState, editingCafe, isOpen]);
 
   const handleChange = <K extends keyof CafeFormPayload>(
     key: K,
@@ -496,6 +603,7 @@ export function CafeFormDrawer({
     console.log("[CafeFormDrawer] Submitting payload", payloadToSubmit);
     try {
       await onSubmit(payloadToSubmit);
+      clearDraft(editingCafe);
       setCurrentStep(2);
     } catch (submitError) {
       console.error("[CafeFormDrawer] Failed to submit form", submitError);
@@ -509,6 +617,7 @@ export function CafeFormDrawer({
   };
 
   const handleRestart = () => {
+    clearDraft(editingCafe);
     setFormState(createEmptyForm());
     setCurrentStep(0);
     setError("");
