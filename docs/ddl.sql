@@ -190,13 +190,6 @@ CREATE TABLE cafes (
   ambience_casual INT CHECK (ambience_casual >= 1 AND ambience_casual <= 5),
   ambience_modern INT CHECK (ambience_modern >= 1 AND ambience_modern <= 5),
   ambassador_comment TEXT,
-  image_main_path TEXT NOT NULL,
-  image_exterior_path TEXT NOT NULL,
-  image_interior_path TEXT NOT NULL,
-  image_power_path TEXT NOT NULL,
-  image_drink_path TEXT,
-  image_food_path TEXT,
-  image_other_paths JSONB NOT NULL DEFAULT '[]'::jsonb,
   deleted_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -298,20 +291,6 @@ COMMENT ON COLUMN cafes.ambience_casual IS '雰囲気：カジュアル度（1-5
 COMMENT ON COLUMN cafes.ambience_modern IS '雰囲気：モダン度（1-5）';
 
 COMMENT ON COLUMN cafes.ambassador_comment IS 'アンバサダーコメント';
-
-COMMENT ON COLUMN cafes.image_main_path IS 'メイン画像パス';
-
-COMMENT ON COLUMN cafes.image_exterior_path IS '外観画像パス';
-
-COMMENT ON COLUMN cafes.image_interior_path IS '内観画像パス';
-
-COMMENT ON COLUMN cafes.image_power_path IS '電源席画像パス';
-
-COMMENT ON COLUMN cafes.image_drink_path IS 'ドリンク画像パス';
-
-COMMENT ON COLUMN cafes.image_food_path IS 'フード画像パス';
-
-COMMENT ON COLUMN cafes.image_other_paths IS 'その他画像パス（配列）';
 
 COMMENT ON COLUMN cafes.latitude IS '緯度';
 
