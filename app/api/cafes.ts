@@ -5,6 +5,15 @@ import type {
   ImageCategoryKey,
 } from "@/app/types/cafe";
 
+type CafeImageRow = {
+  id?: string;
+  cafe_id: string;
+  image_url: string;
+  image_type: ImageCategoryKey;
+  display_order: number | null;
+  caption: string | null;
+};
+
 type CafeTableRow = {
   id: string;
   name: string;
@@ -49,15 +58,9 @@ type CafeTableRow = {
   website: string | null;
   latitude: number | null;
   longitude: number | null;
-  image_main_path: string;
-  image_exterior_path: string;
-  image_interior_path: string;
-  image_power_path: string;
-  image_drink_path: string | null;
-  image_food_path: string | null;
-  image_other_paths: string[];
   deleted_at?: string | null;
   updated_at: string;
+  cafe_images?: CafeImageRow[] | null;
 };
 
 export function changePayloadToCafe(
@@ -150,9 +153,14 @@ export function changePayloadToCafe(
   };
 }
 
+type CafeTableInsert = Omit<
+  CafeTableRow,
+  "id" | "updated_at" | "cafe_images"
+>;
+
 export function buildCafeTableInsert(
   payload: CafeFormPayload,
-): Omit<CafeTableRow, "id" | "updated_at"> {
+): CafeTableInsert {
   const seats =
     typeof payload.seats === "number"
       ? payload.seats
@@ -209,18 +217,17 @@ export function buildCafeTableInsert(
     website: payload.website || null,
     latitude: payload.latitude ?? null,
     longitude: payload.longitude ?? null,
-    image_main_path: ensureImagePath(payload, "main"),
-    image_exterior_path: ensureImagePath(payload, "exterior"),
-    image_interior_path: ensureImagePath(payload, "interior"),
-    image_power_path: ensureImagePath(payload, "power"),
-    image_drink_path: payload.images.drink?.storagePath ?? null,
-    image_food_path: payload.images.food?.storagePath ?? null,
-    image_other_paths: collectOtherImagePaths(payload.images),
     // deleted_at columnはDB側のデフォルトに任せる
   };
 }
 
-export function mapCafeRowToCafe(row: CafeTableRow): Cafe {
+export function mapCafeRowToCafe(
+  row: CafeTableRow,
+  overrideImages?: CafeImageRow[],
+): Cafe {
+  const imageRows = overrideImages ?? row.cafe_images ?? [];
+  const imageMap = buildImageMap(imageRows);
+
   return {
     id: row.id,
     name: row.name,
@@ -265,39 +272,41 @@ export function mapCafeRowToCafe(row: CafeTableRow): Cafe {
     website: row.website ?? "",
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
-    imageMainPath: row.image_main_path,
-    imageExteriorPath: row.image_exterior_path,
-    imageInteriorPath: row.image_interior_path,
-    imagePowerPath: row.image_power_path,
-    imageDrinkPath: row.image_drink_path ?? "",
-    imageFoodPath: row.image_food_path ?? undefined,
-    imageOtherPaths: row.image_other_paths ?? [],
+    imageMainPath: imageMap.main ?? "",
+    imageExteriorPath: imageMap.exterior ?? "",
+    imageInteriorPath: imageMap.interior ?? "",
+    imagePowerPath: imageMap.power ?? "",
+    imageDrinkPath: imageMap.drink ?? "",
+    imageFoodPath: imageMap.food ?? undefined,
+    imageOtherPaths: imageMap.otherList,
     deleted_at: "deleted_at" in row ? row.deleted_at ?? null : null,
     updated_at: row.updated_at,
   };
 }
 
-function ensureImagePath(
-  payload: CafeFormPayload,
-  key: ImageCategoryKey,
-): string {
-  const entry = payload.images[key];
-  if (!entry?.storagePath) {
-    throw new Error(`${key}画像のストレージパスが設定されていません`);
-  }
-  return entry.storagePath;
-}
+function buildImageMap(imageRows?: CafeImageRow[] | null) {
+  const safeRows = Array.isArray(imageRows) ? imageRows : [];
+  const map: Partial<Record<ImageCategoryKey, string>> = {};
+  const sorted = [...safeRows].sort(
+    (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
+  );
+  sorted.forEach((row) => {
+    if (!row?.image_type || !row.image_url) {
+      return;
+    }
+    map[row.image_type as ImageCategoryKey] = row.image_url;
+  });
 
-function collectOtherImagePaths(
-  images: CafeFormPayload["images"],
-): string[] {
-  const paths: string[] = [];
+  const otherList: string[] = [];
   for (let i = 1; i <= 10; i += 1) {
     const key = `other${i}` as ImageCategoryKey;
-    const storagePath = images[key]?.storagePath;
-    if (storagePath) {
-      paths.push(storagePath);
+    if (map[key]) {
+      otherList.push(map[key]!);
     }
   }
-  return paths;
+
+  return {
+    ...map,
+    otherList,
+  } as Partial<Record<ImageCategoryKey, string>> & { otherList: string[] };
 }

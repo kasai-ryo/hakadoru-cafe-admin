@@ -73,7 +73,7 @@ export async function POST(request: Request) {
         }
       }
 
-      cafe = mapCafeRowToCafe(data);
+      cafe = mapCafeRowToCafe(data, cafeImageInserts);
     } catch (supabaseError) {
       console.error("[cafes:POST] Supabase insert failed", supabaseError);
       return NextResponse.json(

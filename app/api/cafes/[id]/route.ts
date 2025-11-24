@@ -142,7 +142,7 @@ export async function PUT(request: Request, context: RouteContext) {
     }
 
     return NextResponse.json(
-      { data: mapCafeRowToCafe(updatedCafe) },
+      { data: mapCafeRowToCafe(updatedCafe, nextImageRows) },
       { status: 200 },
     );
   } catch (error) {
@@ -182,7 +182,7 @@ export async function DELETE(
     .from("cafes")
     .update({ deleted_at: deletedAt })
     .eq("id", cafeId)
-    .select("*")
+    .select("*, cafe_images(*)")
     .maybeSingle();
 
   if (error) {

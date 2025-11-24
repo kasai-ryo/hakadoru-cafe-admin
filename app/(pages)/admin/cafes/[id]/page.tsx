@@ -6,22 +6,22 @@ import { mockCafes } from "@/app/components/admin/cafes/mockData";
 import type { Cafe } from "@/app/types/cafe";
 
 interface DetailPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function AdminCafeDetailPage({
   params,
 }: DetailPageProps) {
-  const { id } = params;
+  const { id } = await params;
   const supabase = getSupabaseServerClient();
   let cafe: Cafe | null = null;
 
   if (supabase) {
     const { data, error } = await supabase
       .from("cafes")
-      .select("*")
+      .select("*, cafe_images(*)")
       .eq("id", id)
       .maybeSingle();
     if (error) {

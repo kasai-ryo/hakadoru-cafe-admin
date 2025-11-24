@@ -11,7 +11,7 @@ export default async function AdminCafesPage() {
   if (supabase) {
     const { data, error } = await supabase
       .from("cafes")
-      .select("*")
+      .select("*, cafe_images(*)")
       .order("created_at", { ascending: false });
     if (error) {
       console.error("[admin/cafes] Failed to fetch cafes", error);
