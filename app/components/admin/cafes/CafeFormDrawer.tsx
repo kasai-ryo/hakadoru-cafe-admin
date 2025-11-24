@@ -492,8 +492,10 @@ export function CafeFormDrawer({
     }
     setError("");
     setIsSubmitting(true);
+    const payloadToSubmit = { ...formState };
+    console.log("[CafeFormDrawer] Submitting payload", payloadToSubmit);
     try {
-      await onSubmit(formState);
+      await onSubmit(payloadToSubmit);
       setCurrentStep(2);
     } catch (submitError) {
       console.error("[CafeFormDrawer] Failed to submit form", submitError);

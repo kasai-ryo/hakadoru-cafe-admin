@@ -29,19 +29,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ errors }, { status: 422 });
   }
 
-  try {
-    const coords = await geocodeCafeAddress(payload);
-    if (coords) {
-      payload = {
-        ...payload,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-      };
-    }
-  } catch (geoError) {
-    console.warn("[cafes:POST] Geocoding failed", geoError);
-  }
-
   const supabase = getSupabaseServerClient();
   let cafe: Cafe | null = null;
   // supabaseへ画像登録

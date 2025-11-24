@@ -53,7 +53,7 @@ type CafeTableRow = {
   image_exterior_path: string;
   image_interior_path: string;
   image_power_path: string;
-  image_drink_path: string;
+  image_drink_path: string | null;
   image_food_path: string | null;
   image_other_paths: string[];
   deleted_at?: string | null;
@@ -213,7 +213,7 @@ export function buildCafeTableInsert(
     image_exterior_path: ensureImagePath(payload, "exterior"),
     image_interior_path: ensureImagePath(payload, "interior"),
     image_power_path: ensureImagePath(payload, "power"),
-    image_drink_path: ensureImagePath(payload, "drink"),
+    image_drink_path: payload.images.drink?.storagePath ?? null,
     image_food_path: payload.images.food?.storagePath ?? null,
     image_other_paths: collectOtherImagePaths(payload.images),
     // deleted_at columnはDB側のデフォルトに任せる
@@ -269,7 +269,7 @@ export function mapCafeRowToCafe(row: CafeTableRow): Cafe {
     imageExteriorPath: row.image_exterior_path,
     imageInteriorPath: row.image_interior_path,
     imagePowerPath: row.image_power_path,
-    imageDrinkPath: row.image_drink_path,
+    imageDrinkPath: row.image_drink_path ?? "",
     imageFoodPath: row.image_food_path ?? undefined,
     imageOtherPaths: row.image_other_paths ?? [],
     deleted_at: "deleted_at" in row ? row.deleted_at ?? null : null,

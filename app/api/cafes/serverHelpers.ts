@@ -18,21 +18,20 @@ export const REQUIRED_TEXT_FIELDS: Array<
     | "addressLine2"
   >
 > = [
-  "name",
-  "facilityType",
-  "area",
-  "prefecture",
-  "postalCode",
-  "addressLine1",
-  "addressLine2",
-];
+    "name",
+    "facilityType",
+    "area",
+    "prefecture",
+    "postalCode",
+    "addressLine1",
+    "addressLine2",
+  ];
 
 export const REQUIRED_IMAGE_CATEGORIES: ImageCategoryKey[] = [
   "main",
   "exterior",
   "interior",
   "power",
-  "drink",
 ];
 
 export const ALL_IMAGE_CATEGORIES: ImageCategoryKey[] = [
@@ -92,10 +91,10 @@ export async function uploadImagesToStorage(
     if (!entry || !entry.fileBase64) {
       continue;
     }
+    const { contentType, base64Payload } = parseBase64(entry.fileBase64);
     const storagePath =
       entry.storagePath ||
-      generateStoragePath(payload.name, category, entry.fileBase64);
-    const { contentType, base64Payload } = parseBase64(entry.fileBase64);
+      generateStoragePath(payload.name, category, contentType);
     const fileBuffer = Buffer.from(base64Payload, "base64");
     const { error } = await supabase.storage
       .from(STORAGE_BUCKET)
@@ -113,6 +112,9 @@ export async function uploadImagesToStorage(
 }
 
 function parseBase64(data: string) {
+  if (typeof data !== "string" || data.length === 0) {
+    throw new Error("画像データが不正です。");
+  }
   const match = data.match(/^data:(.+);base64,(.+)$/);
   if (match) {
     return {
@@ -139,10 +141,9 @@ function formatTimestamp(date: Date) {
 function generateStoragePath(
   _cafeName: string,
   category: string,
-  dataUrl: string,
+  contentType?: string,
 ) {
-  const { contentType } = parseBase64(dataUrl);
-  const ext = contentType.split("/")[1] || "jpg";
+  const ext = contentType?.split("/")[1] || "jpg";
   const timestamp = formatTimestamp(new Date());
   return `cafes/${timestamp}/${category}-${Date.now()}.${ext}`;
 }
