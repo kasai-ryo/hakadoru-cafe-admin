@@ -9,8 +9,6 @@ import {
 } from "@/app/components/admin/cafes/CafeFilterBar";
 import { CafeTable } from "@/app/components/admin/cafes/CafeTable";
 import { CafeFormDrawer } from "@/app/components/admin/cafes/CafeFormDrawer";
-import { CafeDeleteDialog } from "@/app/components/admin/cafes/CafeDeleteDialog";
-import { changePayloadToCafe } from "@/app/api/cafes";
 
 interface AdminCafeDashboardProps {
   cafes: Cafe[];
@@ -33,7 +31,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
   });
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [editingCafe, setEditingCafe] = useState<Cafe | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Cafe | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -97,11 +94,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
 
   const handleCreate = () => {
     setEditingCafe(null);
-    setIsDrawerOpen(true);
-  };
-
-  const handleEdit = (cafe: Cafe) => {
-    setEditingCafe(cafe);
     setIsDrawerOpen(true);
   };
 
@@ -170,60 +162,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
     setCafeList((prev) => [result.data, ...prev]);
   };
 
-  const handleRequestDelete = (cafe: Cafe) => {
-    setDeleteTarget(cafe);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deleteTarget) return;
-    try {
-      const response = await fetch(`/api/cafes/${deleteTarget.id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) {
-        let errorMessage = "カフェの削除に失敗しました。";
-        try {
-          const errorBody = await response.json();
-          if (
-            Array.isArray(errorBody?.errors) &&
-            errorBody.errors.length > 0
-          ) {
-            errorMessage = errorBody.errors.join("\n");
-          } else if (typeof errorBody?.message === "string") {
-            errorMessage = errorBody.message;
-          }
-        } catch {
-          // ignore JSON parse errors
-        }
-        throw new Error(errorMessage);
-      }
-      const result = (await response.json()) as { data: Cafe };
-      if (!result?.data) {
-        throw new Error("削除結果の解析に失敗しました。");
-      }
-      setCafeList((prev) =>
-        prev.map((cafe) =>
-          cafe.id === deleteTarget.id ? result.data : cafe,
-        ),
-      );
-      setDeleteTarget(null);
-    } catch (error) {
-      console.error("[AdminCafeDashboard] delete failed", error);
-      alert(
-        (error as { message?: string }).message ??
-          "削除処理でエラーが発生しました。",
-      );
-    }
-  };
-
-  const handleRestore = (cafe: Cafe) => {
-    setCafeList((prev) =>
-      prev.map((item) =>
-        item.id === cafe.id ? { ...item, deleted_at: null } : item,
-      ),
-    );
-  };
-
   const lockedView = (
     <div className="mx-auto w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
       <h1 className="text-2xl font-semibold text-gray-900">
@@ -253,6 +191,9 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
               <p className="mt-2 text-sm text-gray-600">
                 カフェの新規登録・更新・論理削除（アーカイブ）を行う管理画面です。
               </p>
+              <p className="mt-1 text-xs text-red-500">
+                ※削除済みのカフェは復元できません。削除前に内容をご確認ください。
+              </p>
             </div>
             <button
               onClick={handleCreate}
@@ -268,12 +209,7 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
               areaOptions={areaOptions}
               onChange={handleFilterChange}
             />
-            <CafeTable
-              cafes={filteredCafes}
-              onEdit={handleEdit}
-              onDelete={handleRequestDelete}
-              onRestore={handleRestore}
-            />
+            <CafeTable cafes={filteredCafes} />
           </div>
         </>
       )}
@@ -288,11 +224,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
         editingCafe={editingCafe}
       />
 
-      <CafeDeleteDialog
-        cafe={deleteTarget}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={handleConfirmDelete}
-      />
     </section>
   );
 }

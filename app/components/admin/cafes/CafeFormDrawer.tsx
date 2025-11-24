@@ -67,6 +67,20 @@ const SUPABASE_STORAGE_BUCKET =
 const CREATE_DRAFT_KEY = "admin-cafe-form-draft";
 const EDIT_DRAFT_PREFIX = "admin-cafe-form-edit-";
 
+const REQUIRED_FIELD_LABELS: Record<
+  keyof Pick<
+    CafeFormPayload,
+    "name" | "area" | "prefecture" | "postalCode" | "addressLine1"
+  >,
+  string
+> = {
+  name: "店舗名",
+  area: "エリア",
+  prefecture: "都道府県",
+  postalCode: "郵便番号",
+  addressLine1: "住所1",
+};
+
 type SerializedImageUpload = {
   id: string;
   storagePath: string | null;
@@ -377,6 +391,11 @@ function buildPublicImageUrl(path: string) {
   return `${SUPABASE_PUBLIC_URL}/storage/v1/object/public/${SUPABASE_STORAGE_BUCKET}/${path}`;
 }
 
+function scrollToTop() {
+  if (typeof window === "undefined") return;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
 export function CafeFormDrawer({
   isOpen,
   onClose,
@@ -443,9 +462,16 @@ export function CafeFormDrawer({
     });
   }, [isOpen, formState.images]);
 
-useEffect(() => {
-  saveDraft(formState, editingCafe, isOpen);
-}, [formState, editingCafe, isOpen]);
+  useEffect(() => {
+    saveDraft(formState, editingCafe, isOpen);
+  }, [formState, editingCafe, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [currentStep, isOpen]);
 
   const handleChange = <K extends keyof CafeFormPayload>(
     key: K,
@@ -558,6 +584,12 @@ useEffect(() => {
   };
 
   const handleImageClear = (category: ImageCategoryKey) => {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm("この画像を削除しますか？");
+      if (!confirmed) {
+        return;
+      }
+    }
     const prev = formState.images[category];
     if (prev?.previewUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(prev.previewUrl);
@@ -574,6 +606,7 @@ useEffect(() => {
   const handleBasicNext = () => {
     setError("");
     setCurrentStep(1);
+    scrollToTop();
   };
 
   const handleImageNext = async () => {
@@ -586,15 +619,23 @@ useEffect(() => {
     ];
     const missing = requiredFields.filter((key) => !formState[key]);
     if (missing.length > 0) {
-      setError("必須項目をすべて入力してください。");
+      const messages = missing.map(
+        (key) => `${REQUIRED_FIELD_LABELS[key]}は必須入力です`,
+      );
+      setError(messages.join("\n"));
       setCurrentStep(0);
+      scrollToTop();
       return;
     }
     const missingImages = IMAGE_CATEGORIES.filter(
       (category) => category.required && !formState.images[category.key],
     );
     if (missingImages.length > 0) {
-      setError("必須の画像カテゴリをすべて登録してください。");
+      const imageMessages = missingImages.map(
+        (category) => `${category.label}は必須入力です`,
+      );
+      setError(imageMessages.join("\n"));
+      scrollToTop();
       return;
     }
     setError("");
@@ -754,7 +795,7 @@ useEffect(() => {
             )}
 
             {error && (
-              <p className="mt-6 text-sm text-red-600" role="alert">
+              <p className="mt-6 whitespace-pre-line text-sm text-red-600" role="alert">
                 {error}
               </p>
             )}

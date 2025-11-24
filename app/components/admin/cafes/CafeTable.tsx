@@ -1,21 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import clsx from "clsx";
 import type { Cafe } from "@/app/types/cafe";
 
 interface CafeTableProps {
   cafes: Cafe[];
-  onEdit: (cafe: Cafe) => void;
-  onDelete: (cafe: Cafe) => void;
-  onRestore: (cafe: Cafe) => void;
 }
 
-export function CafeTable({
-  cafes,
-  onEdit,
-  onDelete,
-  onRestore,
-}: CafeTableProps) {
+export function CafeTable({ cafes }: CafeTableProps) {
   if (cafes.length === 0) {
     return (
       <div className="py-12 text-center text-sm text-gray-500">
@@ -34,7 +27,7 @@ export function CafeTable({
             <th className="px-4 py-3 font-medium">ステータス</th>
             <th className="px-4 py-3 font-medium">表示状態</th>
             <th className="px-4 py-3 font-medium">更新日</th>
-            <th className="px-4 py-3 font-medium text-right">操作</th>
+            <th className="px-4 py-3 font-medium text-right">詳細</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
@@ -83,30 +76,13 @@ export function CafeTable({
               <td className="px-4 py-4 text-sm text-gray-600">
                 {new Date(cafe.updated_at).toLocaleDateString("ja-JP")}
               </td>
-              <td className="px-4 py-4">
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => onEdit(cafe)}
-                    className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    編集
-                  </button>
-                  {cafe.deleted_at ? (
-                    <button
-                      onClick={() => onRestore(cafe)}
-                      className="rounded-lg border border-primary px-3 py-1 text-xs font-medium text-primary hover:bg-primary/5"
-                    >
-                      復元
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => onDelete(cafe)}
-                      className="rounded-lg border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                    >
-                      削除
-                    </button>
-                  )}
-                </div>
+              <td className="px-4 py-4 text-right">
+                <Link
+                  href={`/admin/cafes/${cafe.id}`}
+                  className="inline-flex items-center rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  詳細
+                </Link>
               </td>
             </tr>
           ))}
