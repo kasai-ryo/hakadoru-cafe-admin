@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import type { Cafe, CafeFormPayload } from "@/app/types/cafe";
+import type { Cafe, CafeFormPayload, ImageCategoryKey } from "@/app/types/cafe";
 import { CafeFormDrawer } from "@/app/components/admin/cafes/CafeFormDrawer";
 import { CafeDeleteDialog } from "@/app/components/admin/cafes/CafeDeleteDialog";
 
@@ -308,19 +308,24 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
             {imageEntries(currentCafe).map((entry) => (
               <article
                 key={entry.label}
-                className="rounded-2xl border border-gray-100 bg-white shadow-sm"
+                className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
               >
                 <div className="border-b border-gray-100 px-4 py-2 text-sm font-medium text-gray-700">
                   {entry.label}
                 </div>
-                {entry.url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={entry.url} alt={entry.label} className="h-48 w-full rounded-b-2xl object-cover" />
-                ) : (
-                  <div className="flex h-48 items-center justify-center rounded-b-2xl bg-gray-50 text-sm text-gray-400">
-                    画像なし
-                  </div>
-                )}
+                <div className="flex flex-col">
+                  {entry.url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={entry.url} alt={entry.label} className="h-48 w-full object-cover" />
+                  ) : (
+                    <div className="flex h-48 items-center justify-center bg-gray-50 text-sm text-gray-400">
+                      画像なし
+                    </div>
+                  )}
+                  <p className="border-t border-gray-100 px-4 py-3 text-xs text-gray-600">
+                    {entry.caption?.trim() ? entry.caption : "キャプション未設定"}
+                  </p>
+                </div>
               </article>
             ))}
           </div>
@@ -576,19 +581,21 @@ function buildPublicImageUrl(path?: string | null) {
 }
 
 function imageEntries(cafe: Cafe) {
-  const entries = [
-    { label: "メイン", url: buildPublicImageUrl(cafe.imageMainPath) },
-    { label: "外観", url: buildPublicImageUrl(cafe.imageExteriorPath) },
-    { label: "内観", url: buildPublicImageUrl(cafe.imageInteriorPath) },
-    { label: "電源席", url: buildPublicImageUrl(cafe.imagePowerPath) },
-    { label: "ドリンク", url: buildPublicImageUrl(cafe.imageDrinkPath) },
-    { label: "フード", url: buildPublicImageUrl(cafe.imageFoodPath) },
+  const entries: Array<{ label: string; url: string | null; caption?: string | null }> = [
+    { label: "メイン", url: buildPublicImageUrl(cafe.imageMainPath), caption: cafe.imageCaptions.main },
+    { label: "外観", url: buildPublicImageUrl(cafe.imageExteriorPath), caption: cafe.imageCaptions.exterior },
+    { label: "内観", url: buildPublicImageUrl(cafe.imageInteriorPath), caption: cafe.imageCaptions.interior },
+    { label: "電源席", url: buildPublicImageUrl(cafe.imagePowerPath), caption: cafe.imageCaptions.power },
+    { label: "ドリンク", url: buildPublicImageUrl(cafe.imageDrinkPath), caption: cafe.imageCaptions.drink },
+    { label: "フード", url: buildPublicImageUrl(cafe.imageFoodPath), caption: cafe.imageCaptions.food },
   ];
 
   cafe.imageOtherPaths.forEach((path, index) => {
+    const key = `other${index + 1}` as ImageCategoryKey;
     entries.push({
       label: `その他${index + 1}`,
       url: buildPublicImageUrl(path),
+      caption: cafe.imageCaptions[key],
     });
   });
 

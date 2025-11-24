@@ -148,6 +148,18 @@ export function changePayloadToCafe(
       }
       return next;
     })(),
+    imageCaptions: (() => {
+      const captions: Partial<Record<ImageCategoryKey, string>> = {
+        ...base?.imageCaptions,
+      };
+      (Object.keys(images) as ImageCategoryKey[]).forEach((key) => {
+        const caption = images[key]?.caption;
+        if (typeof caption === "string") {
+          captions[key] = caption;
+        }
+      });
+      return captions;
+    })(),
     deleted_at: base?.deleted_at ?? null,
     updated_at: now,
   };
@@ -226,7 +238,7 @@ export function mapCafeRowToCafe(
   overrideImages?: CafeImageRow[],
 ): Cafe {
   const imageRows = overrideImages ?? row.cafe_images ?? [];
-  const imageMap = buildImageMap(imageRows);
+  const { pathMap, captionMap, otherList } = buildImageMaps(imageRows);
 
   return {
     id: row.id,
@@ -272,21 +284,23 @@ export function mapCafeRowToCafe(
     website: row.website ?? "",
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
-    imageMainPath: imageMap.main ?? "",
-    imageExteriorPath: imageMap.exterior ?? "",
-    imageInteriorPath: imageMap.interior ?? "",
-    imagePowerPath: imageMap.power ?? "",
-    imageDrinkPath: imageMap.drink ?? "",
-    imageFoodPath: imageMap.food ?? undefined,
-    imageOtherPaths: imageMap.otherList,
+    imageMainPath: pathMap.main ?? "",
+    imageExteriorPath: pathMap.exterior ?? "",
+    imageInteriorPath: pathMap.interior ?? "",
+    imagePowerPath: pathMap.power ?? "",
+    imageDrinkPath: pathMap.drink ?? "",
+    imageFoodPath: pathMap.food ?? undefined,
+    imageOtherPaths: otherList,
+    imageCaptions: captionMap,
     deleted_at: "deleted_at" in row ? row.deleted_at ?? null : null,
     updated_at: row.updated_at,
   };
 }
 
-function buildImageMap(imageRows?: CafeImageRow[] | null) {
+function buildImageMaps(imageRows?: CafeImageRow[] | null) {
   const safeRows = Array.isArray(imageRows) ? imageRows : [];
-  const map: Partial<Record<ImageCategoryKey, string>> = {};
+  const pathMap: Partial<Record<ImageCategoryKey, string>> = {};
+  const captionMap: Partial<Record<ImageCategoryKey, string>> = {};
   const sorted = [...safeRows].sort(
     (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0),
   );
@@ -294,19 +308,24 @@ function buildImageMap(imageRows?: CafeImageRow[] | null) {
     if (!row?.image_type || !row.image_url) {
       return;
     }
-    map[row.image_type as ImageCategoryKey] = row.image_url;
+    const key = row.image_type as ImageCategoryKey;
+    pathMap[key] = row.image_url;
+    if (row.caption) {
+      captionMap[key] = row.caption;
+    }
   });
 
   const otherList: string[] = [];
   for (let i = 1; i <= 10; i += 1) {
     const key = `other${i}` as ImageCategoryKey;
-    if (map[key]) {
-      otherList.push(map[key]!);
+    if (pathMap[key]) {
+      otherList.push(pathMap[key]!);
     }
   }
 
   return {
-    ...map,
+    pathMap,
+    captionMap,
     otherList,
-  } as Partial<Record<ImageCategoryKey, string>> & { otherList: string[] };
+  };
 }

@@ -97,6 +97,7 @@ export interface Cafe {
   imageDrinkPath: string;
   imageFoodPath?: string;
   imageOtherPaths: string[];
+  imageCaptions: Partial<Record<ImageCategoryKey, string>>;
   deleted_at: string | null;
   updated_at: string;
 }

@@ -268,33 +268,69 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   latitude: cafe.latitude,
   longitude: cafe.longitude,
   images: {
-    main: createImageState(cafe.imageMainPath),
-    exterior: createImageState(cafe.imageExteriorPath),
-    interior: createImageState(cafe.imageInteriorPath),
-    power: createImageState(cafe.imagePowerPath),
-    drink: createImageState(cafe.imageDrinkPath),
-    food: createImageState(cafe.imageFoodPath),
-    other1: createImageState(cafe.imageOtherPaths[0]),
-    other2: createImageState(cafe.imageOtherPaths[1]),
-    other3: createImageState(cafe.imageOtherPaths[2]),
-    other4: createImageState(cafe.imageOtherPaths[3]),
-    other5: createImageState(cafe.imageOtherPaths[4]),
-    other6: createImageState(cafe.imageOtherPaths[5]),
-    other7: createImageState(cafe.imageOtherPaths[6]),
-    other8: createImageState(cafe.imageOtherPaths[7]),
-    other9: createImageState(cafe.imageOtherPaths[8]),
-    other10: createImageState(cafe.imageOtherPaths[9]),
+    main: createImageState(cafe.imageMainPath, cafe.imageCaptions.main),
+    exterior: createImageState(
+      cafe.imageExteriorPath,
+      cafe.imageCaptions.exterior,
+    ),
+    interior: createImageState(
+      cafe.imageInteriorPath,
+      cafe.imageCaptions.interior,
+    ),
+    power: createImageState(cafe.imagePowerPath, cafe.imageCaptions.power),
+    drink: createImageState(cafe.imageDrinkPath, cafe.imageCaptions.drink),
+    food: createImageState(cafe.imageFoodPath, cafe.imageCaptions.food),
+    other1: createImageState(
+      cafe.imageOtherPaths[0],
+      cafe.imageCaptions.other1,
+    ),
+    other2: createImageState(
+      cafe.imageOtherPaths[1],
+      cafe.imageCaptions.other2,
+    ),
+    other3: createImageState(
+      cafe.imageOtherPaths[2],
+      cafe.imageCaptions.other3,
+    ),
+    other4: createImageState(
+      cafe.imageOtherPaths[3],
+      cafe.imageCaptions.other4,
+    ),
+    other5: createImageState(
+      cafe.imageOtherPaths[4],
+      cafe.imageCaptions.other5,
+    ),
+    other6: createImageState(
+      cafe.imageOtherPaths[5],
+      cafe.imageCaptions.other6,
+    ),
+    other7: createImageState(
+      cafe.imageOtherPaths[6],
+      cafe.imageCaptions.other7,
+    ),
+    other8: createImageState(
+      cafe.imageOtherPaths[7],
+      cafe.imageCaptions.other8,
+    ),
+    other9: createImageState(
+      cafe.imageOtherPaths[8],
+      cafe.imageCaptions.other9,
+    ),
+    other10: createImageState(
+      cafe.imageOtherPaths[9],
+      cafe.imageCaptions.other10,
+    ),
   },
 });
 
-function createImageState(path?: string | null): ImageUpload | null {
+function createImageState(path?: string | null, caption?: string | null): ImageUpload | null {
   if (!path) return null;
   const previewUrl = buildPublicImageUrl(path);
   return {
     id: crypto.randomUUID(),
     storagePath: path,
     previewUrl,
-    caption: "",
+    caption: caption ?? "",
     fileBase64: null,
   };
 }
