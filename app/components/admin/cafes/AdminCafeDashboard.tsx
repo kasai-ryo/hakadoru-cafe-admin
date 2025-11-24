@@ -256,7 +256,6 @@ function LoginForm({ onSubmit, error }: LoginFormProps) {
           value={id}
           onChange={(event) => setId(event.target.value)}
           className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          placeholder=""
         />
       </div>
       <div>
@@ -272,7 +271,6 @@ function LoginForm({ onSubmit, error }: LoginFormProps) {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className="mt-1 w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-          placeholder=""
         />
       </div>
       {error && (
