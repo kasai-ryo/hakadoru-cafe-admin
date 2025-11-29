@@ -547,12 +547,12 @@ function alcoholLabel(option: Cafe["alcohol"]) {
 
 function crowdItems(matrix: Cafe["crowdMatrix"]) {
   return [
-    { label: "平日 朝", value: matrix.weekdayMorning },
-    { label: "平日 昼", value: matrix.weekdayAfternoon },
-    { label: "平日 夜", value: matrix.weekdayEvening },
-    { label: "休日 朝", value: matrix.weekendMorning },
-    { label: "休日 昼", value: matrix.weekendAfternoon },
-    { label: "休日 夜", value: matrix.weekendEvening },
+    { label: "平日 朝 (06:00-11:00)", value: matrix.weekdayMorning },
+    { label: "平日 昼 (11:00-14:00)", value: matrix.weekdayAfternoon },
+    { label: "平日 夕方 (14:00-18:00)", value: matrix.weekdayEvening },
+    { label: "休日 朝 (06:00-11:00)", value: matrix.weekendMorning },
+    { label: "休日 昼 (11:00-14:00)", value: matrix.weekendAfternoon },
+    { label: "休日 夕方 (14:00-18:00)", value: matrix.weekendEvening },
   ];
 }
 

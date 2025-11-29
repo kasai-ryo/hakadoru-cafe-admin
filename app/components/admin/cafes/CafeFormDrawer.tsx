@@ -104,12 +104,12 @@ const CROWD_DEFINITIONS = {
 };
 
 const CROWD_SLOTS: Array<{ key: keyof CrowdMatrix; label: string }> = [
-  { key: "weekdayMorning", label: "平日 朝" },
-  { key: "weekdayAfternoon", label: "平日 昼" },
-  { key: "weekdayEvening", label: "平日 夜" },
-  { key: "weekendMorning", label: "休日 朝" },
-  { key: "weekendAfternoon", label: "休日 昼" },
-  { key: "weekendEvening", label: "休日 夜" },
+  { key: "weekdayMorning", label: "平日 朝 (06:00-11:00)" },
+  { key: "weekdayAfternoon", label: "平日 昼 (11:00-14:00)" },
+  { key: "weekdayEvening", label: "平日 夕方 (14:00-18:00)" },
+  { key: "weekendMorning", label: "休日 朝 (06:00-11:00)" },
+  { key: "weekendAfternoon", label: "休日 昼 (11:00-14:00)" },
+  { key: "weekendEvening", label: "休日 夕方 (14:00-18:00)" },
 ];
 
 const IMAGE_CATEGORIES: Array<{
