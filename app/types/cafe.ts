@@ -9,16 +9,26 @@ export type SmokingOption =
   | "allowed";
 export type BringOwnFoodOption = "allowed" | "not_allowed" | "drinks_only";
 export type AlcoholOption = "available" | "night_only" | "unavailable";
-export type CrowdLevel = "empty" | "normal" | "crowded" | "unknown";
+export type CrowdLevel = "empty" | "normal" | "crowded" | "unknown" | "closed";
+export type CrowdSlotKey =
+  | "weekday0608"
+  | "weekday0810"
+  | "weekday1012"
+  | "weekday1214"
+  | "weekday1416"
+  | "weekday1618"
+  | "weekday1820"
+  | "weekday2022"
+  | "weekend0608"
+  | "weekend0810"
+  | "weekend1012"
+  | "weekend1214"
+  | "weekend1416"
+  | "weekend1618"
+  | "weekend1820"
+  | "weekend2022";
 
-export interface CrowdMatrix {
-  weekdayMorning: CrowdLevel;
-  weekdayAfternoon: CrowdLevel;
-  weekdayEvening: CrowdLevel;
-  weekendMorning: CrowdLevel;
-  weekendAfternoon: CrowdLevel;
-  weekendEvening: CrowdLevel;
-}
+export type CrowdMatrix = Record<CrowdSlotKey, CrowdLevel>;
 
 export type ImageCategoryKey =
   | "main"
@@ -58,6 +68,7 @@ export interface Cafe {
   addressLine3: string;
   address: string;
   access: string;
+  nearestStation: string;
   phone: string;
   status: CafeStatus;
   timeLimit: string;
@@ -112,6 +123,7 @@ export interface CafeFormPayload {
   addressLine2: string;
   addressLine3: string;
   access: string;
+  nearestStation: string;
   phone: string;
   status: CafeStatus;
   timeLimit: string;

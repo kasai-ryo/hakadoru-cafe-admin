@@ -43,15 +43,6 @@ const SERVICE_OPTIONS = [
 
 const PAYMENT_OPTIONS = ["現金", "クレカ", "QR決済", "交通系IC"];
 
-const CUSTOMER_TYPES = [
-  "学生",
-  "会社員",
-  "ファミリー",
-  "観光客",
-  "女子会",
-  "カップル",
-];
-
 const RECOMMENDED_WORK_OPTIONS = [
   "PC作業",
   "読書",
@@ -63,13 +54,11 @@ const SUPABASE_PUBLIC_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
 const SUPABASE_STORAGE_BUCKET =
   process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "cafeimages";
-const CREATE_DRAFT_KEY = "admin-cafe-form-draft";
-const EDIT_DRAFT_PREFIX = "admin-cafe-form-edit-";
 
 const REQUIRED_FIELD_LABELS: Record<
   keyof Pick<
     CafeFormPayload,
-    "name" | "area" | "prefecture" | "postalCode" | "addressLine1"
+    "name" | "area" | "prefecture" | "postalCode" | "addressLine1" | "nearestStation"
   >,
   string
 > = {
@@ -78,6 +67,7 @@ const REQUIRED_FIELD_LABELS: Record<
   prefecture: "都道府県",
   postalCode: "郵便番号",
   addressLine1: "住所1",
+  nearestStation: "最寄駅",
 };
 
 type SerializedImageUpload = {
@@ -90,26 +80,84 @@ type SerializedFormState = Omit<CafeFormPayload, "images"> & {
   images: Record<ImageCategoryKey, SerializedImageUpload | null>;
 };
 
+type DraftSnapshotItem = {
+  id: string;
+  savedAt: string;
+  editingCafeId: string | null;
+  editingCafeName: string | null;
+  cafeName: string;
+  payload: SerializedFormState;
+};
+
 const CROWD_OPTIONS: { label: string; value: CrowdLevel }[] = [
-  { label: "空いている", value: "empty" },
+  { label: "空いてる", value: "empty" },
   { label: "普通", value: "normal" },
   { label: "混雑", value: "crowded" },
-  { label: "不明", value: "unknown" }
+  { label: "待ち", value: "unknown" },
+  { label: "営業時間外", value: "closed" },
 ];
 
 const CROWD_DEFINITIONS = {
-  empty: "空いている：席の50%以上が空いている状態。",
+  empty: "空いてる：席に余裕がある状態。",
   normal: "普通：席の半分程度が埋まっており、待たずに座れる状態。",
   crowded: "混雑：満席に近く、入店待ちや席確保が難しい状態。",
+  unknown: "待ち：満席で着席まで待機が発生する状態（値は unknown として保存）。",
+  closed: "営業時間外：その時間帯は営業していない状態。",
 };
 
-const CROWD_SLOTS: Array<{ key: keyof CrowdMatrix; label: string }> = [
-  { key: "weekdayMorning", label: "平日 朝 (06:00-11:00)" },
-  { key: "weekdayAfternoon", label: "平日 昼 (11:00-14:00)" },
-  { key: "weekdayEvening", label: "平日 夕方 (14:00-18:00)" },
-  { key: "weekendMorning", label: "休日 朝 (06:00-11:00)" },
-  { key: "weekendAfternoon", label: "休日 昼 (11:00-14:00)" },
-  { key: "weekendEvening", label: "休日 夕方 (14:00-18:00)" },
+const CROWD_DAY_SECTIONS: Array<{
+  label: string;
+  value: "weekday" | "weekend";
+}> = [
+  { label: "平日", value: "weekday" },
+  { label: "休日", value: "weekend" },
+];
+
+const CROWD_TIME_ROWS: Array<{
+  label: string;
+  weekdayKey: keyof CrowdMatrix;
+  weekendKey: keyof CrowdMatrix;
+}> = [
+  {
+    label: "06:00-08:00",
+    weekdayKey: "weekday0608",
+    weekendKey: "weekend0608",
+  },
+  {
+    label: "08:00-10:00",
+    weekdayKey: "weekday0810",
+    weekendKey: "weekend0810",
+  },
+  {
+    label: "10:00-12:00",
+    weekdayKey: "weekday1012",
+    weekendKey: "weekend1012",
+  },
+  {
+    label: "12:00-14:00",
+    weekdayKey: "weekday1214",
+    weekendKey: "weekend1214",
+  },
+  {
+    label: "14:00-16:00",
+    weekdayKey: "weekday1416",
+    weekendKey: "weekend1416",
+  },
+  {
+    label: "16:00-18:00",
+    weekdayKey: "weekday1618",
+    weekendKey: "weekend1618",
+  },
+  {
+    label: "18:00-20:00",
+    weekdayKey: "weekday1820",
+    weekendKey: "weekend1820",
+  },
+  {
+    label: "20:00-22:00",
+    weekdayKey: "weekday2022",
+    weekendKey: "weekend2022",
+  },
 ];
 
 const IMAGE_CATEGORIES: Array<{
@@ -142,13 +190,40 @@ const IMAGE_CATEGORIES: Array<{
   ];
 
 const createEmptyCrowdMatrix = (): CrowdMatrix => ({
-  weekdayMorning: "normal",
-  weekdayAfternoon: "normal",
-  weekdayEvening: "normal",
-  weekendMorning: "normal",
-  weekendAfternoon: "normal",
-  weekendEvening: "normal",
+  weekday0608: "normal",
+  weekday0810: "normal",
+  weekday1012: "normal",
+  weekday1214: "normal",
+  weekday1416: "normal",
+  weekday1618: "normal",
+  weekday1820: "normal",
+  weekday2022: "normal",
+  weekend0608: "normal",
+  weekend0810: "normal",
+  weekend1012: "normal",
+  weekend1214: "normal",
+  weekend1416: "normal",
+  weekend1618: "normal",
+  weekend1820: "normal",
+  weekend2022: "normal",
 });
+
+function normalizeCrowdMatrix(
+  raw?: Partial<Record<string, CrowdLevel>> | null,
+): CrowdMatrix {
+  const base = createEmptyCrowdMatrix();
+  if (!raw) return base;
+
+  const next: CrowdMatrix = { ...base };
+  (Object.keys(base) as Array<keyof CrowdMatrix>).forEach((key) => {
+    const value = raw[key];
+    if (value) {
+      next[key] = value;
+    }
+  });
+
+  return next;
+}
 
 const createEmptyImages = (): Record<
   ImageCategoryKey,
@@ -179,6 +254,13 @@ type PostalLookupFeedback =
   }
   | null;
 
+type DraftSaveFeedback =
+  | {
+    type: "success" | "error";
+    message: string;
+  }
+  | null;
+
 const createEmptyForm = (): CafeFormPayload => ({
   name: "",
   facilityType: "cafe",
@@ -189,6 +271,7 @@ const createEmptyForm = (): CafeFormPayload => ({
   addressLine2: "",
   addressLine3: "",
   access: "",
+  nearestStation: "",
   phone: "",
   status: "open",
   timeLimit: "",
@@ -208,7 +291,7 @@ const createEmptyForm = (): CafeFormPayload => ({
   parking: false,
   smoking: "no_smoking",
   coffeePrice: 0,
-  bringOwnFood: "allowed",
+  bringOwnFood: "not_allowed",
   alcohol: "unavailable",
   services: [],
   paymentMethods: [],
@@ -234,6 +317,7 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   addressLine2: cafe.addressLine2,
   addressLine3: cafe.addressLine3,
   access: cafe.access,
+  nearestStation: cafe.nearestStation,
   phone: cafe.phone,
   status: cafe.status,
   timeLimit: cafe.timeLimit,
@@ -259,7 +343,7 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   paymentMethods: cafe.paymentMethods,
   customerTypes: cafe.customerTypes,
   recommendedWorkStyles: cafe.recommendedWorkStyles ?? [],
-  crowdMatrix: cafe.crowdMatrix,
+  crowdMatrix: normalizeCrowdMatrix(cafe.crowdMatrix),
   ambienceCasual: cafe.ambienceCasual,
   ambienceModern: cafe.ambienceModern,
   ambassadorComment: cafe.ambassadorComment,
@@ -360,8 +444,15 @@ function deserializeFormState(serialized: SerializedFormState): CafeFormPayload 
   const next: CafeFormPayload = {
     ...base,
     ...serialized,
+    crowdMatrix: normalizeCrowdMatrix(serialized.crowdMatrix),
     images: { ...base.images },
   };
+  next.bringOwnFood =
+    next.bringOwnFood === "allowed" ||
+      next.bringOwnFood === "not_allowed" ||
+      next.bringOwnFood === "drinks_only"
+      ? next.bringOwnFood
+      : base.bringOwnFood;
   IMAGE_CATEGORIES.forEach(({ key }) => {
     const entry = serialized.images[key];
     if (!entry || !entry.storagePath) {
@@ -379,44 +470,144 @@ function deserializeFormState(serialized: SerializedFormState): CafeFormPayload 
   return next;
 }
 
-function getDraftStorageKey(editingCafe: Cafe | null) {
-  return editingCafe ? `${EDIT_DRAFT_PREFIX}${editingCafe.id}` : CREATE_DRAFT_KEY;
+async function fetchDraftSnapshots(
+  editingCafe: Cafe | null,
+): Promise<DraftSnapshotItem[]> {
+  const params = new URLSearchParams();
+  if (editingCafe?.id) {
+    params.set("cafeId", editingCafe.id);
+  }
+  const response = await fetch(`/api/cafe-drafts?${params.toString()}`, {
+    cache: "no-store",
+  });
+  const data = (await response.json()) as {
+    data?: DraftSnapshotItem[];
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(data.message ?? "一時保存一覧の取得に失敗しました。");
+  }
+  return Array.isArray(data.data) ? data.data : [];
 }
 
-function saveDraft(
+async function fetchDraftSnapshotById(
+  snapshotId: string,
+): Promise<DraftSnapshotItem> {
+  const response = await fetch(`/api/cafe-drafts/${snapshotId}`, {
+    cache: "no-store",
+  });
+  const data = (await response.json()) as {
+    data?: DraftSnapshotItem;
+    message?: string;
+  };
+  if (!response.ok || !data.data) {
+    throw new Error(data.message ?? "一時保存の取得に失敗しました。");
+  }
+  return data.data;
+}
+
+async function createDraftSnapshot(
   state: CafeFormPayload,
   editingCafe: Cafe | null,
-  isOpen: boolean,
 ) {
-  if (typeof window === "undefined") return;
-  if (!isOpen) return;
-  const key = getDraftStorageKey(editingCafe);
-  const serialized = serializeFormState(state);
-  try {
-    window.localStorage.setItem(key, JSON.stringify(serialized));
-  } catch (error) {
-    console.error("[CafeFormDrawer] Failed to save draft", error);
+  const response = await fetch("/api/cafe-drafts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      editingCafeId: editingCafe?.id ?? null,
+      editingCafeName: editingCafe?.name ?? null,
+      cafeName: state.name || editingCafe?.name || "",
+      payload: serializeFormState(state),
+    }),
+  });
+  const data = (await response.json()) as { message?: string };
+  if (!response.ok) {
+    throw new Error(data.message ?? "一時保存に失敗しました。");
   }
 }
 
-function loadDraft(editingCafe: Cafe | null): CafeFormPayload | null {
-  if (typeof window === "undefined") return null;
-  const key = getDraftStorageKey(editingCafe);
-  const raw = window.localStorage.getItem(key);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as SerializedFormState;
-    return deserializeFormState(parsed);
-  } catch (error) {
-    console.error("[CafeFormDrawer] Failed to parse draft", error);
-    return null;
+async function uploadDraftImages(
+  state: CafeFormPayload,
+): Promise<CafeFormPayload> {
+  const hasPendingImage = IMAGE_CATEGORIES.some((category) =>
+    Boolean(state.images[category.key]?.fileBase64),
+  );
+  if (!hasPendingImage) {
+    return state;
+  }
+
+  const response = await fetch("/api/cafe-drafts/upload-images", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ payload: state }),
+  });
+  const data = (await response.json()) as {
+    imageUpdates?: Partial<
+      Record<
+        ImageCategoryKey,
+        {
+          id: string;
+          storagePath: string | null;
+          caption: string;
+          fileBase64: null;
+        } | null
+      >
+    >;
+    message?: string;
+  };
+  if (!response.ok) {
+    throw new Error(data.message ?? "下書き画像のアップロードに失敗しました。");
+  }
+
+  const nextImages = { ...state.images };
+  IMAGE_CATEGORIES.forEach(({ key }) => {
+    const update = data.imageUpdates?.[key];
+    if (update === undefined) return;
+    const current = nextImages[key];
+    if (!update) {
+      nextImages[key] = null;
+      return;
+    }
+    nextImages[key] = current
+      ? {
+          ...current,
+          id: update.id ?? current.id,
+          storagePath: update.storagePath ?? current.storagePath,
+          caption: update.caption ?? current.caption,
+          fileBase64: null,
+        }
+      : null;
+  });
+
+  return {
+    ...state,
+    images: nextImages,
+  };
+}
+
+async function removeDraftSnapshot(snapshotId: string) {
+  const response = await fetch(`/api/cafe-drafts/${snapshotId}`, {
+    method: "DELETE",
+  });
+  const data = (await response.json()) as { message?: string };
+  if (!response.ok) {
+    throw new Error(data.message ?? "一時保存の削除に失敗しました。");
   }
 }
 
-function clearDraft(editingCafe: Cafe | null) {
-  if (typeof window === "undefined") return;
-  const key = getDraftStorageKey(editingCafe);
-  window.localStorage.removeItem(key);
+function formatDraftSnapshotTime(isoString: string) {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return isoString;
+  const y = date.getFullYear();
+  const m = `${date.getMonth() + 1}`.padStart(2, "0");
+  const d = `${date.getDate()}`.padStart(2, "0");
+  const hh = `${date.getHours()}`.padStart(2, "0");
+  const mm = `${date.getMinutes()}`.padStart(2, "0");
+  return `${y}/${m}/${d} ${hh}:${mm}`;
 }
 
 function buildPublicImageUrl(path: string) {
@@ -431,11 +622,17 @@ export function CafeFormDrawer({
   onClose,
   onSubmit,
   editingCafe,
+  initialDraftSnapshotId,
+  layout = "drawer",
+  showDraftSnapshotList = true,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (payload: CafeFormPayload) => Promise<void>;
   editingCafe: Cafe | null;
+  initialDraftSnapshotId?: string | null;
+  layout?: "drawer" | "page";
+  showDraftSnapshotList?: boolean;
 }) {
   const [formState, setFormState] = useState<CafeFormPayload>(
     createEmptyForm(),
@@ -444,6 +641,11 @@ export function CafeFormDrawer({
   const [error, setError] = useState("");
   const [postalLookupFeedback, setPostalLookupFeedback] =
     useState<PostalLookupFeedback>(null);
+  const [draftSaveFeedback, setDraftSaveFeedback] =
+    useState<DraftSaveFeedback>(null);
+  const [draftSnapshots, setDraftSnapshots] = useState<DraftSnapshotItem[]>([]);
+  const [isDraftSnapshotLoading, setIsDraftSnapshotLoading] = useState(false);
+  const [isDraftSnapshotSaving, setIsDraftSnapshotSaving] = useState(false);
   const [isPostalLookupLoading, setIsPostalLookupLoading] =
     useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -464,19 +666,15 @@ export function CafeFormDrawer({
       return;
     }
     if (editingCafe) {
-      const draft = loadDraft(editingCafe);
-      if (draft) {
-        setFormState(draft);
-      } else {
-        setFormState(mapCafeToFormPayload(editingCafe));
-      }
+      setFormState(mapCafeToFormPayload(editingCafe));
     } else {
-      const draft = loadDraft(null);
-      setFormState(draft ?? createEmptyForm());
+      setFormState(createEmptyForm());
     }
     setCurrentStep(0);
     setError("");
     setPostalLookupFeedback(null);
+    setDraftSaveFeedback(null);
+    setDraftSnapshots([]);
     setIsPostalLookupLoading(false);
   }, [isOpen, editingCafe]);
 
@@ -504,8 +702,103 @@ export function CafeFormDrawer({
   }, [isOpen, formState.images]);
 
   useEffect(() => {
-    saveDraft(formState, editingCafe, isOpen);
-  }, [formState, editingCafe, isOpen]);
+    if (!showDraftSnapshotList) return;
+    if (!isOpen) return;
+    let cancelled = false;
+    const run = async () => {
+      setIsDraftSnapshotLoading(true);
+      try {
+        const items = await fetchDraftSnapshots(editingCafe);
+        if (!cancelled) {
+          setDraftSnapshots(items);
+        }
+      } catch (error) {
+        console.error("[CafeFormDrawer] Failed to fetch draft snapshots", error);
+        if (!cancelled) {
+          setDraftSaveFeedback({
+            type: "error",
+            message:
+              (error as { message?: string }).message ??
+              "一時保存一覧の取得に失敗しました。",
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsDraftSnapshotLoading(false);
+        }
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, editingCafe, showDraftSnapshotList]);
+
+  useEffect(() => {
+    if (!isOpen || !initialDraftSnapshotId) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const snapshot = await fetchDraftSnapshotById(initialDraftSnapshotId);
+        if (cancelled) return;
+        setFormState(deserializeFormState(snapshot.payload));
+        setDraftSaveFeedback({
+          type: "success",
+          message: `一時保存を復元しました（${formatDraftSnapshotTime(snapshot.savedAt)}）`,
+        });
+        setError("");
+        setPostalLookupFeedback(null);
+      } catch (loadError) {
+        console.error("[CafeFormDrawer] Failed to load initial draft snapshot", loadError);
+        if (!cancelled) {
+          setDraftSaveFeedback({
+            type: "error",
+            message:
+              (loadError as { message?: string }).message ??
+              "一時保存の復元に失敗しました。",
+          });
+        }
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, initialDraftSnapshotId]);
+
+  const refreshDraftSnapshots = async () => {
+    const items = await fetchDraftSnapshots(editingCafe);
+    setDraftSnapshots(items);
+  };
+
+  const handleDraftSave = async () => {
+    setIsDraftSnapshotSaving(true);
+    try {
+      const stateForSave = await uploadDraftImages(formState);
+      if (stateForSave !== formState) {
+        setFormState(stateForSave);
+      }
+      await createDraftSnapshot(stateForSave, editingCafe);
+      const now = new Date();
+      const hh = `${now.getHours()}`.padStart(2, "0");
+      const mm = `${now.getMinutes()}`.padStart(2, "0");
+      setDraftSaveFeedback({
+        type: "success",
+        message: `一時保存しました（${hh}:${mm}）`,
+      });
+      await refreshDraftSnapshots();
+    } catch (error) {
+      console.error("[CafeFormDrawer] Failed to save draft manually", error);
+      setDraftSaveFeedback({
+        type: "error",
+        message:
+          (error as { message?: string }).message ??
+          "一時保存に失敗しました。時間をおいて再度お試しください。",
+      });
+    } finally {
+      setIsDraftSnapshotSaving(false);
+    }
+  };
 
   const jumpToStep = (step: number) => {
     setCurrentStep(step);
@@ -654,6 +947,7 @@ export function CafeFormDrawer({
       "prefecture",
       "postalCode",
       "addressLine1",
+      "nearestStation",
     ];
     const missing = requiredFields.filter((key) => !formState[key]);
     if (missing.length > 0) {
@@ -681,7 +975,6 @@ export function CafeFormDrawer({
     console.log("[CafeFormDrawer] Submitting payload", payloadToSubmit);
     try {
       await onSubmit(payloadToSubmit);
-      clearDraft(editingCafe);
       jumpToStep(2);
     } catch (submitError) {
       console.error("[CafeFormDrawer] Failed to submit form", submitError);
@@ -695,12 +988,53 @@ export function CafeFormDrawer({
   };
 
   const handleRestart = () => {
-    clearDraft(editingCafe);
     setFormState(createEmptyForm());
     jumpToStep(0);
     setError("");
     setPostalLookupFeedback(null);
+    setDraftSaveFeedback(null);
     setIsSubmitting(false);
+  };
+
+  const handleDraftSnapshotLoad = (snapshot: DraftSnapshotItem) => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("現在の入力内容を上書きして、一時保存を復元しますか？")
+    ) {
+      return;
+    }
+    setFormState(deserializeFormState(snapshot.payload));
+    setDraftSaveFeedback({
+      type: "success",
+      message: `一時保存を復元しました（${formatDraftSnapshotTime(snapshot.savedAt)}）`,
+    });
+    setError("");
+    setPostalLookupFeedback(null);
+  };
+
+  const handleDraftSnapshotDelete = async (snapshotId: string) => {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm("この一時保存を削除しますか？")
+    ) {
+      return;
+    }
+    try {
+      await removeDraftSnapshot(snapshotId);
+      await refreshDraftSnapshots();
+      setDraftSaveFeedback({
+        type: "success",
+        message: "一時保存を削除しました。",
+      });
+    } catch (error) {
+      console.error("[CafeFormDrawer] Failed to delete draft snapshot", error);
+      setDraftSaveFeedback({
+        type: "error",
+        message:
+          (error as { message?: string }).message ??
+          "一時保存の削除に失敗しました。",
+      });
+    }
   };
 
   const stepLabels = useMemo(
@@ -759,15 +1093,21 @@ export function CafeFormDrawer({
 
   return (
     <>
-      <div
-        className={`fixed inset-0 bg-black/30 transition-opacity ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"
-          }`}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      {layout === "drawer" && (
+        <div
+          className={`fixed inset-0 bg-black/30 transition-opacity ${isOpen ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
       <aside
-        className={`fixed right-0 top-0 z-40 h-full w-full max-w-5xl transform bg-white shadow-2xl transition-transform ${isOpen ? "translate-x-0" : "translate-x-full"
-          }`}
+        className={
+          layout === "page"
+            ? "relative mx-auto h-full w-full max-w-none bg-white"
+            : `fixed right-0 top-0 z-40 h-full w-full max-w-5xl transform bg-white shadow-2xl transition-transform ${isOpen ? "translate-x-0" : "translate-x-full"
+            }`
+        }
         aria-hidden={!isOpen}
       >
         <div className="flex h-full flex-col">
@@ -802,6 +1142,62 @@ export function CafeFormDrawer({
           </header>
 
           <div className="flex-1 overflow-y-auto px-6 py-6" ref={contentRef}>
+            {showDraftSnapshotList && currentStep !== 2 && (isDraftSnapshotLoading || draftSnapshots.length > 0) && (
+              <section className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">一時保存一覧</h3>
+                    <p className="text-xs text-gray-600">
+                      {editingCafe
+                        ? "この店舗の一時保存を復元できます"
+                        : "新規登録の一時保存を復元できます"}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-white px-2 py-1 text-xs text-gray-600">
+                    {draftSnapshots.length}件
+                  </span>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {isDraftSnapshotLoading && (
+                    <p className="rounded-xl border border-amber-100 bg-white px-3 py-2 text-xs text-gray-600">
+                      一時保存一覧を読み込み中...
+                    </p>
+                  )}
+                  {draftSnapshots.map((snapshot) => (
+                    <div
+                      key={snapshot.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-100 bg-white px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-gray-900">
+                          {snapshot.cafeName || "店舗名未入力"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          保存日時: {formatDraftSnapshotTime(snapshot.savedAt)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50"
+                          onClick={() => handleDraftSnapshotLoad(snapshot)}
+                        >
+                          復元
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                          onClick={() => void handleDraftSnapshotDelete(snapshot.id)}
+                        >
+                          削除
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {currentStep === 0 && (
               <InfoStep
                 formState={formState}
@@ -839,15 +1235,36 @@ export function CafeFormDrawer({
           </div>
 
           <footer className="border-t border-gray-200 px-6 py-4">
+            {draftSaveFeedback && currentStep !== 2 && (
+              <p
+                className={`mb-3 text-xs ${draftSaveFeedback.type === "success"
+                    ? "text-emerald-600"
+                    : "text-red-600"
+                  }`}
+                role="status"
+              >
+                {draftSaveFeedback.message}
+              </p>
+            )}
             {currentStep === 0 && (
               <div className="flex justify-between">
-                <button
-                  type="button"
-                  className="text-sm text-gray-500 underline"
-                  onClick={onClose}
-                >
-                  キャンセル
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="text-sm text-gray-500 underline"
+                    onClick={onClose}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    onClick={() => void handleDraftSave()}
+                    disabled={isDraftSnapshotSaving}
+                  >
+                    {isDraftSnapshotSaving ? "一時保存中..." : "一時保存"}
+                  </button>
+                </div>
                 <button
                   type="button"
                   className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
@@ -860,13 +1277,23 @@ export function CafeFormDrawer({
 
             {currentStep === 1 && (
               <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                  onClick={() => jumpToStep(0)}
-                >
-                  情報入力に戻る
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    onClick={() => jumpToStep(0)}
+                  >
+                    情報入力に戻る
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                    onClick={() => void handleDraftSave()}
+                    disabled={isSubmitting || isDraftSnapshotSaving}
+                  >
+                    {isDraftSnapshotSaving ? "一時保存中..." : "一時保存"}
+                  </button>
+                </div>
                 <button
                   type="button"
                   className={`rounded-lg px-5 py-2 text-sm font-semibold text-white ${isSubmitting
@@ -1015,6 +1442,7 @@ function InfoStep({
           <div className="space-y-2">
             <TextField
               label="郵便番号"
+              required
               placeholder="例: 103-0027"
               value={formState.postalCode}
               onChange={(value) => onChange("postalCode", value)}
@@ -1069,6 +1497,13 @@ function InfoStep({
           placeholder="最寄駅や徒歩時間を入力"
           rows={4}
           onChange={(value) => onChange("access", value)}
+        />
+        <TextField
+          label="最寄駅"
+          required
+          value={formState.nearestStation}
+          placeholder="例: 渋谷駅"
+          onChange={(value) => onChange("nearestStation", value)}
         />
       </Section>
 
@@ -1143,7 +1578,7 @@ function InfoStep({
             onChange={(checked) => onChange("parking", checked)}
           />
           <SelectField
-            label="電源状況"
+            label="電源席の割合"
             required
             options={[
               { label: "全席", value: "all" },
@@ -1187,23 +1622,6 @@ function InfoStep({
             }
           />
           <SelectField
-            label="飲食物持込"
-            required
-            options={[
-              { label: "可能", value: "allowed" },
-              { label: "不可", value: "not_allowed" },
-              { label: "飲み物のみ可", value: "drinks_only" },
-              { label: "不明", value: "unknown" },
-            ]}
-            value={formState.bringOwnFood}
-            onChange={(value) =>
-              onChange(
-                "bringOwnFood",
-                value as CafeFormPayload["bringOwnFood"],
-              )
-            }
-          />
-          <SelectField
             label="アルコール提供"
             required
             options={[
@@ -1232,7 +1650,7 @@ function InfoStep({
         />
       </Section>
 
-      <Section title="料金・雰囲気・客層">
+      <Section title="料金・雰囲気">
         <NumberField
           label="コーヒー1杯の値段（円）"
           value={formState.coffeePrice}
@@ -1248,12 +1666,6 @@ function InfoStep({
           options={PAYMENT_OPTIONS}
           values={formState.paymentMethods}
           onToggle={(value) => onChipToggle("paymentMethods", value)}
-        />
-        <ChipSelect
-          label="客層"
-          options={CUSTOMER_TYPES}
-          values={formState.customerTypes}
-          onToggle={(value) => onChipToggle("customerTypes", value)}
         />
         <div className="grid gap-4 md:grid-cols-2">
           <SliderField
@@ -1464,7 +1876,7 @@ function CompletionStep({
             <dd className="font-medium">{formState.status}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-gray-500">Wi-Fi / 電源</dt>
+            <dt className="text-gray-500">Wi-Fi / 電源席</dt>
             <dd className="font-medium">
               {formState.wifi ? "あり" : "なし"} / {formState.outlet}
             </dd>
@@ -1789,18 +2201,83 @@ function CrowdMatrixField({
         <p>{CROWD_DEFINITIONS.empty}</p>
         <p>{CROWD_DEFINITIONS.normal}</p>
         <p>{CROWD_DEFINITIONS.crowded}</p>
+        <p>{CROWD_DEFINITIONS.unknown}</p>
+        <p>{CROWD_DEFINITIONS.closed}</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        {CROWD_SLOTS.map((slot) => (
-          <SelectField
-            key={slot.key}
-            label={slot.label}
-            options={CROWD_OPTIONS}
-            value={crowdMatrix[slot.key]}
-            onChange={(value) =>
-              onChange(slot.key, value as CrowdLevel)
-            }
-          />
+
+      <div className="space-y-4">
+        {CROWD_DAY_SECTIONS.map((section) => (
+          <div
+            key={section.value}
+            className="space-y-2 rounded-2xl border border-gray-200 bg-white p-3"
+          >
+            <h4 className="text-sm font-semibold text-gray-900">{section.label}</h4>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] table-fixed text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <th className="px-3 py-2 text-left font-semibold text-gray-700">
+                      時間帯
+                    </th>
+                    {CROWD_OPTIONS.map((option) => (
+                      <th
+                        key={option.value}
+                        className="px-1 py-2 text-center font-semibold text-gray-700"
+                      >
+                        {option.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {CROWD_TIME_ROWS.map((row, rowIndex) => {
+                    const slotKey =
+                      section.value === "weekday" ? row.weekdayKey : row.weekendKey;
+
+                    return (
+                      <tr
+                        key={`${section.value}-${row.label}`}
+                        className={`border-b border-gray-100 last:border-b-0 ${
+                          rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50/50"
+                        }`}
+                      >
+                        <td className="px-3 py-3 font-medium text-gray-900">
+                          {row.label}
+                        </td>
+                        {CROWD_OPTIONS.map((option) => {
+                          const isSelected = crowdMatrix[slotKey] === option.value;
+                          return (
+                            <td key={option.value} className="px-1 py-1 text-center">
+                              <button
+                                type="button"
+                                aria-pressed={isSelected}
+                                aria-label={`${section.label} ${row.label} ${option.label}`}
+                                onClick={() => onChange(slotKey, option.value)}
+                                className={`w-full rounded-lg border px-2 py-2 text-center text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 ${
+                                  isSelected
+                                    ? "border-primary bg-primary text-white"
+                                    : "border-gray-200 text-gray-600 hover:bg-gray-100"
+                                }`}
+                              >
+                                <span
+                                  aria-hidden="true"
+                                  className={`mx-auto block h-4 w-4 rounded-full border transition-colors ${
+                                    isSelected
+                                      ? "border-white bg-white"
+                                      : "border-current bg-transparent"
+                                  }`}
+                                />
+                              </button>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ))}
       </div>
     </div>

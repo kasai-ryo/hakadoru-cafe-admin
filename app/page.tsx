@@ -20,6 +20,12 @@ export default function HomePage() {
       >
         カフェ管理ページを開く
       </Link>
+      <Link
+        href="/admin/cafe-drafts"
+        className="rounded-lg border border-gray-300 px-6 py-3 text-gray-700 hover:bg-gray-50"
+      >
+        一時保存一覧を開く
+      </Link>
     </main>
   );
 }

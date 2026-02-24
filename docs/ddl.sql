@@ -151,6 +151,7 @@ CREATE TABLE cafes (
   address_line3 TEXT,
   address TEXT NOT NULL,
   access TEXT,
+  nearest_station TEXT,
   hours_weekday_from TIME,
   hours_weekday_to TIME,
   hours_weekend_from TIME,
@@ -180,12 +181,22 @@ CREATE TABLE cafes (
   customer_types JSONB NOT NULL DEFAULT '[]'::jsonb,
   recommended_work JSONB NOT NULL DEFAULT '[]'::jsonb,
   crowd_levels JSONB NOT NULL DEFAULT '{
-    "weekdayMorning":"normal",
-    "weekdayAfternoon":"normal",
-    "weekdayEvening":"normal",
-    "weekendMorning":"normal",
-    "weekendAfternoon":"normal",
-    "weekendEvening":"normal"
+    "weekday0608":"normal",
+    "weekday0810":"normal",
+    "weekday1012":"normal",
+    "weekday1214":"normal",
+    "weekday1416":"normal",
+    "weekday1618":"normal",
+    "weekday1820":"normal",
+    "weekday2022":"normal",
+    "weekend0608":"normal",
+    "weekend0810":"normal",
+    "weekend1012":"normal",
+    "weekend1214":"normal",
+    "weekend1416":"normal",
+    "weekend1618":"normal",
+    "weekend1820":"normal",
+    "weekend2022":"normal"
   }'::jsonb,
   ambience_casual INT CHECK (ambience_casual >= 1 AND ambience_casual <= 5),
   ambience_modern INT CHECK (ambience_modern >= 1 AND ambience_modern <= 5),
@@ -231,6 +242,8 @@ COMMENT ON COLUMN cafes.address_line3 IS '建物名・フロア等';
 COMMENT ON COLUMN cafes.address IS '住所';
 
 COMMENT ON COLUMN cafes.access IS 'アクセス';
+
+COMMENT ON COLUMN cafes.nearest_station IS '最寄駅';
 
 COMMENT ON COLUMN cafes.hours_weekday_from IS '営業時間（平日）開始';
 
@@ -284,7 +297,7 @@ COMMENT ON COLUMN cafes.customer_types IS '客層（配列）';
 
 COMMENT ON COLUMN cafes.recommended_work IS '適した作業（配列）';
 
-COMMENT ON COLUMN cafes.crowd_levels IS '混雑度（平日/休日×朝昼夜）';
+COMMENT ON COLUMN cafes.crowd_levels IS 'オーナー入力の混雑目安（平日/休日×時間帯）';
 
 COMMENT ON COLUMN cafes.ambience_casual IS '雰囲気：カジュアル度（1-5）';
 

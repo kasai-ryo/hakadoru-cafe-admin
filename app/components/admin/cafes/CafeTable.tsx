@@ -23,7 +23,7 @@ export function CafeTable({ cafes }: CafeTableProps) {
         <thead className="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500">
           <tr>
             <th className="px-4 py-3 font-medium">店舗名 / エリア</th>
-            <th className="px-4 py-3 font-medium">Wi-Fi / 電源</th>
+            <th className="px-4 py-3 font-medium">Wi-Fi / 電源席</th>
             <th className="px-4 py-3 font-medium">ステータス</th>
             <th className="px-4 py-3 font-medium">表示状態</th>
             <th className="px-4 py-3 font-medium">更新日</th>
@@ -43,6 +43,9 @@ export function CafeTable({ cafes }: CafeTableProps) {
                   </Link>
                 </div>
                 <div className="mt-1 text-xs text-gray-500">{cafe.area}</div>
+                <div className="mt-1 text-xs text-gray-500">
+                  最寄駅: {cafe.nearestStation || "未設定"}
+                </div>
               </td>
               <td className="px-4 py-4">
                 <div className="flex items-center gap-2 text-xs text-gray-700">
@@ -55,7 +58,7 @@ export function CafeTable({ cafes }: CafeTableProps) {
                     Wi-Fi
                   </span>
                   <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-blue-700">
-                    電源: {outletLabel(cafe.outlet)}
+                    電源席: {outletLabel(cafe.outlet)}
                   </span>
                 </div>
               </td>
@@ -72,7 +75,7 @@ export function CafeTable({ cafes }: CafeTableProps) {
               <td className="px-4 py-4">
                 {cafe.deleted_at ? (
                   <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
-                    削除済み
+                    非公開
                   </span>
                 ) : (
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">

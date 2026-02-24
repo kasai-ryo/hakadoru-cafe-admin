@@ -9,12 +9,17 @@ interface DetailPageProps {
   params: Promise<{
     id: string;
   }>;
+  searchParams?: Promise<{
+    draftId?: string;
+  }>;
 }
 
 export default async function AdminCafeDetailPage({
   params,
+  searchParams,
 }: DetailPageProps) {
   const { id } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const supabase = getSupabaseServerClient();
   let cafe: Cafe | null = null;
 
@@ -41,7 +46,10 @@ export default async function AdminCafeDetailPage({
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <AdminCafeDetail cafe={cafe} />
+      <AdminCafeDetail
+        cafe={cafe}
+        initialDraftSnapshotId={resolvedSearchParams?.draftId ?? null}
+      />
     </main>
   );
 }

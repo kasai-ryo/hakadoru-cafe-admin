@@ -205,3 +205,69 @@ export async function DELETE(
 
   return NextResponse.json({ data: mapCafeRowToCafe(data) }, { status: 200 });
 }
+
+export async function PATCH(
+  request: Request,
+  context: RouteContext,
+) {
+  const { id: cafeId } = await context.params;
+  if (!cafeId) {
+    return NextResponse.json(
+      { message: "カフェIDが指定されていません。" },
+      { status: 400 },
+    );
+  }
+
+  let body: { isPublic?: boolean };
+  try {
+    body = (await request.json()) as { isPublic?: boolean };
+  } catch (error) {
+    return NextResponse.json(
+      { message: "JSONの解析に失敗しました", detail: String(error) },
+      { status: 400 },
+    );
+  }
+
+  if (typeof body.isPublic !== "boolean") {
+    return NextResponse.json(
+      { message: "isPublic(boolean) の指定が必要です。" },
+      { status: 400 },
+    );
+  }
+
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    return NextResponse.json(
+      { message: "Supabaseの環境変数が設定されていません。" },
+      { status: 500 },
+    );
+  }
+
+  const nextDeletedAt = body.isPublic ? null : new Date().toISOString();
+  const { data, error } = await supabase
+    .from("cafes")
+    .update({ deleted_at: nextDeletedAt })
+    .eq("id", cafeId)
+    .select("*, cafe_images(*)")
+    .maybeSingle();
+
+  if (error) {
+    console.error("[cafes:PATCH] Failed to update visibility", error);
+    return NextResponse.json(
+      {
+        message: "公開状態の更新に失敗しました。",
+        detail: String(error.message ?? error),
+      },
+      { status: 500 },
+    );
+  }
+
+  if (!data) {
+    return NextResponse.json(
+      { message: "指定されたカフェが見つかりません。" },
+      { status: 404 },
+    );
+  }
+
+  return NextResponse.json({ data: mapCafeRowToCafe(data) }, { status: 200 });
+}

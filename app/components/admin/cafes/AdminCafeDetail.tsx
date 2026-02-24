@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Cafe, CafeFormPayload, ImageCategoryKey } from "@/app/types/cafe";
 import { CafeFormDrawer } from "@/app/components/admin/cafes/CafeFormDrawer";
@@ -9,14 +8,17 @@ import { CafeDeleteDialog } from "@/app/components/admin/cafes/CafeDeleteDialog"
 
 interface AdminCafeDetailProps {
   cafe: Cafe;
+  initialDraftSnapshotId?: string | null;
 }
 
 const ADMIN_ID = "cafe";
 const ADMIN_PASSWORD = "hakadoru";
 const SESSION_KEY = "hakadoru-admin-session";
 
-export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
-  const router = useRouter();
+export function AdminCafeDetail({
+  cafe,
+  initialDraftSnapshotId,
+}: AdminCafeDetailProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState("");
   const [currentCafe, setCurrentCafe] = useState<Cafe>(cafe);
@@ -36,6 +38,12 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
   useEffect(() => {
     setCurrentCafe(cafe);
   }, [cafe]);
+
+  useEffect(() => {
+    if (initialDraftSnapshotId) {
+      setIsDrawerOpen(true);
+    }
+  }, [initialDraftSnapshotId]);
 
   const handleLogin = (id: string, password: string) => {
     if (id === ADMIN_ID && password === ADMIN_PASSWORD) {
@@ -81,13 +89,18 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
     setIsDrawerOpen(false);
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmVisibilityChange = async () => {
     setIsDeleteDialogOpen(false);
+    const nextIsPublic = Boolean(currentCafe.deleted_at);
     const response = await fetch(`/api/cafes/${currentCafe.id}`, {
-      method: "DELETE",
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ isPublic: nextIsPublic }),
     });
     if (!response.ok) {
-      let errorMessage = "カフェの削除に失敗しました。";
+      let errorMessage = "公開状態の更新に失敗しました。";
       try {
         const errorBody = await response.json();
         if (Array.isArray(errorBody?.errors) && errorBody.errors.length > 0) {
@@ -102,10 +115,9 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
     }
     const result = (await response.json()) as { data: Cafe };
     if (!result?.data) {
-      throw new Error("削除結果の解析に失敗しました。");
+      throw new Error("公開状態更新結果の解析に失敗しました。");
     }
     setCurrentCafe(result.data);
-    router.push("/admin/cafes");
   };
 
   const lockedView = (
@@ -136,22 +148,24 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
           </h1>
           <p className="mt-2 text-sm text-gray-600">{currentCafe.address}</p>
         </div>
-        {!currentCafe.deleted_at && (
-          <div className="flex gap-3">
-            <button
-              onClick={() => setIsDrawerOpen(true)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              編集
-            </button>
-            <button
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-            >
-              削除
-            </button>
-          </div>
-        )}
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            編集
+          </button>
+          <button
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className={`rounded-lg px-4 py-2 text-sm font-medium ${
+              currentCafe.deleted_at
+                ? "border border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                : "border border-amber-200 text-amber-700 hover:bg-amber-50"
+            }`}
+          >
+            {currentCafe.deleted_at ? "公開にする" : "非公開にする"}
+          </button>
+        </div>
       </header>
 
       <div className="mt-6 space-y-6">
@@ -164,7 +178,7 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
               { label: "利用制限", value: currentCafe.timeLimit || "ー" },
               { label: "Wi-Fi", value: currentCafe.wifi ? "あり" : "なし" },
               {
-                label: "電源",
+                label: "電源席の割合",
                 value: outletLabel(currentCafe.outlet),
               },
               {
@@ -190,7 +204,6 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
                 value: currentCafe.seats ? `${currentCafe.seats}席` : "未設定",
               },
               { label: "コーヒー価格", value: priceLabel(currentCafe.coffeePrice) },
-              { label: "飲食物持込", value: bringOwnFoodLabel(currentCafe.bringOwnFood) },
               { label: "アルコール提供", value: alcoholLabel(currentCafe.alcohol) },
               { label: "電話番号", value: currentCafe.phone || "未設定" },
               {
@@ -220,6 +233,7 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
               { label: "住所1", value: currentCafe.addressLine1 },
               { label: "住所2", value: currentCafe.addressLine2 || "ー" },
               { label: "住所3", value: currentCafe.addressLine3 || "ー" },
+              { label: "最寄駅", value: currentCafe.nearestStation || "ー" },
               { label: "アクセス", value: currentCafe.access || "ー" },
               {
                 label: "緯度 / 経度",
@@ -252,17 +266,13 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
           />
         </InfoSection>
 
-        <InfoSection title="サービス・客層">
+        <InfoSection title="サービス">
           <InfoGrid
             items={[
               { label: "サービス", value: formatList(currentCafe.services) },
               {
                 label: "支払い方法",
                 value: formatList(currentCafe.paymentMethods),
-              },
-              {
-                label: "客層",
-                value: formatList(currentCafe.customerTypes),
               },
               {
                 label: "おすすめ用途",
@@ -343,12 +353,13 @@ export function AdminCafeDetail({ cafe }: AdminCafeDetailProps) {
         onClose={() => setIsDrawerOpen(false)}
         onSubmit={handleSave}
         editingCafe={currentCafe}
+        initialDraftSnapshotId={initialDraftSnapshotId}
       />
 
       <CafeDeleteDialog
         cafe={isDeleteDialogOpen ? currentCafe : null}
         onCancel={() => setIsDeleteDialogOpen(false)}
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleConfirmVisibilityChange}
       />
     </section>
   );
@@ -507,28 +518,15 @@ function lightingLabel(lighting: Cafe["lighting"]) {
 function smokingLabel(smoking: Cafe["smoking"]) {
   switch (smoking) {
     case "no_smoking":
-      return "禁煙";
+      return "全席禁煙";
     case "separated":
       return "分煙";
     case "e_cigarette":
-      return "電子タバコ";
+      return "電子タバコ可";
     case "allowed":
       return "喫煙可";
     default:
       return smoking;
-  }
-}
-
-function bringOwnFoodLabel(option: Cafe["bringOwnFood"]) {
-  switch (option) {
-    case "allowed":
-      return "持込可";
-    case "not_allowed":
-      return "不可";
-    case "drinks_only":
-      return "ドリンクのみ";
-    default:
-      return option;
   }
 }
 
@@ -547,23 +545,37 @@ function alcoholLabel(option: Cafe["alcohol"]) {
 
 function crowdItems(matrix: Cafe["crowdMatrix"]) {
   return [
-    { label: "平日 朝 (06:00-11:00)", value: matrix.weekdayMorning },
-    { label: "平日 昼 (11:00-14:00)", value: matrix.weekdayAfternoon },
-    { label: "平日 夕方 (14:00-18:00)", value: matrix.weekdayEvening },
-    { label: "休日 朝 (06:00-11:00)", value: matrix.weekendMorning },
-    { label: "休日 昼 (11:00-14:00)", value: matrix.weekendAfternoon },
-    { label: "休日 夕方 (14:00-18:00)", value: matrix.weekendEvening },
+    { label: "平日 06:00-08:00", value: matrix.weekday0608 },
+    { label: "平日 08:00-10:00", value: matrix.weekday0810 },
+    { label: "平日 10:00-12:00", value: matrix.weekday1012 },
+    { label: "平日 12:00-14:00", value: matrix.weekday1214 },
+    { label: "平日 14:00-16:00", value: matrix.weekday1416 },
+    { label: "平日 16:00-18:00", value: matrix.weekday1618 },
+    { label: "平日 18:00-20:00", value: matrix.weekday1820 },
+    { label: "平日 20:00-22:00", value: matrix.weekday2022 },
+    { label: "休日 06:00-08:00", value: matrix.weekend0608 },
+    { label: "休日 08:00-10:00", value: matrix.weekend0810 },
+    { label: "休日 10:00-12:00", value: matrix.weekend1012 },
+    { label: "休日 12:00-14:00", value: matrix.weekend1214 },
+    { label: "休日 14:00-16:00", value: matrix.weekend1416 },
+    { label: "休日 16:00-18:00", value: matrix.weekend1618 },
+    { label: "休日 18:00-20:00", value: matrix.weekend1820 },
+    { label: "休日 20:00-22:00", value: matrix.weekend2022 },
   ];
 }
 
 function crowdLabel(level: Cafe["crowdMatrix"][keyof Cafe["crowdMatrix"]]) {
   switch (level) {
     case "empty":
-      return "空いている";
+      return "空いてる";
     case "normal":
       return "普通";
     case "crowded":
       return "混雑";
+    case "unknown":
+      return "待ち";
+    case "closed":
+      return "営業時間外";
     default:
       return level;
   }

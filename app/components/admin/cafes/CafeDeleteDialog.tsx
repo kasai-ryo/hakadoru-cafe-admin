@@ -13,6 +13,8 @@ export function CafeDeleteDialog({
   onCancel,
   onConfirm,
 }: CafeDeleteDialogProps) {
+  const isPrivate = Boolean(cafe?.deleted_at);
+
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center ${
@@ -32,10 +34,12 @@ export function CafeDeleteDialog({
         }`}
       >
         <h3 className="text-lg font-semibold text-gray-900">
-          このカフェを削除しますか？
+          {isPrivate ? "このカフェを公開しますか？" : "このカフェを非公開にしますか？"}
         </h3>
         <p className="mt-3 text-sm text-gray-600">
-          削除すると「削除済み」状態となり、通常の一覧から除外されます。データは保持されるため、必要に応じて復元できます。
+          {isPrivate
+            ? "公開にすると通常の一覧に表示されます。カフェ情報の内容はそのまま維持されます。"
+            : "非公開にすると通常の一覧から除外されます。データは保持されるため、あとで再公開できます。"}
         </p>
         {cafe && (
           <div className="mt-4 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-700">
@@ -52,9 +56,11 @@ export function CafeDeleteDialog({
           </button>
           <button
             onClick={onConfirm}
-            className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500"
+            className={`rounded-lg px-5 py-2 text-sm font-semibold text-white ${
+              isPrivate ? "bg-emerald-600 hover:bg-emerald-500" : "bg-amber-600 hover:bg-amber-500"
+            }`}
           >
-            削除する
+            {isPrivate ? "公開する" : "非公開にする"}
           </button>
         </div>
       </div>

@@ -6,7 +6,6 @@ export interface CafeFilterState {
   search: string;
   area: string;
   status: CafeStatus | "all" | "deleted";
-  wifiOnly: boolean;
   showDeleted: boolean;
 }
 
@@ -73,7 +72,7 @@ export function CafeFilterBar({
             <option value="open">開店</option>
             <option value="recently_opened">最近オープン</option>
             <option value="closed">閉店</option>
-            <option value="deleted">削除済み</option>
+            <option value="deleted">非公開</option>
           </select>
         </div>
       </div>
@@ -84,22 +83,13 @@ export function CafeFilterBar({
           <label className="inline-flex items-center gap-2 text-gray-700">
             <input
               type="checkbox"
-              checked={filters.wifiOnly}
-              onChange={(event) => handleChange("wifiOnly", event.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-            />
-            Wi-Fiありのみ
-          </label>
-          <label className="inline-flex items-center gap-2 text-gray-700">
-            <input
-              type="checkbox"
               checked={filters.showDeleted}
               onChange={(event) =>
                 handleChange("showDeleted", event.target.checked)
               }
               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
-            削除済みを含める
+            非公開を含める
           </label>
         </div>
       </div>

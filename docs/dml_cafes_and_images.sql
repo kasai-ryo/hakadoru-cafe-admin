@@ -86,7 +86,7 @@ VALUES (
         '["現金","クレカ"]',
         '["ビジネス","学生"]',
         '["PC作業"]',
-        '{"weekdayMorning":"normal","weekdayAfternoon":"normal","weekdayEvening":"crowded","weekendMorning":"normal","weekendAfternoon":"crowded","weekendEvening":"crowded"}',
+        '{"weekday0608":"normal","weekday0810":"normal","weekday1012":"normal","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"crowded","weekday2022":"crowded","weekend0608":"normal","weekend0810":"normal","weekend1012":"normal","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"crowded","weekend2022":"crowded"}',
         3,
         3,
         '東京駅から近いサンプルカフェ1です。'
@@ -131,7 +131,7 @@ VALUES (
         '["現金","クレカ","QR決済"]',
         '["観光客","ビジネス"]',
         '["読書","打合せ"]',
-        '{"weekdayMorning":"normal","weekdayAfternoon":"normal","weekdayEvening":"normal","weekendMorning":"crowded","weekendAfternoon":"crowded","weekendEvening":"normal"}',
+        '{"weekday0608":"normal","weekday0810":"normal","weekday1012":"normal","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"normal","weekday2022":"normal","weekend0608":"crowded","weekend0810":"crowded","weekend1012":"crowded","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"normal","weekend2022":"normal"}',
         2,
         4,
         '夜景がきれいなサンプルカフェ2'
@@ -174,9 +174,9 @@ VALUES (
         'available',
         '[]',
         '["現金","クレカ"]',
-        '["学生","フリーランス"]',
+        '["学生"]',
         '["勉強","PC作業"]',
-        '{"weekdayMorning":"normal","weekdayAfternoon":"normal","weekdayEvening":"normal","weekendMorning":"normal","weekendAfternoon":"crowded","weekendEvening":"crowded"}',
+        '{"weekday0608":"normal","weekday0810":"normal","weekday1012":"normal","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"normal","weekday2022":"normal","weekend0608":"normal","weekend0810":"normal","weekend1012":"normal","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"crowded","weekend2022":"crowded"}',
         4,
         2,
         '静かな地下スペースのサンプルカフェ3'
@@ -221,7 +221,7 @@ VALUES (
         '["現金"]',
         '["観光客"]',
         '["休憩"]',
-        '{"weekdayMorning":"empty","weekdayAfternoon":"normal","weekdayEvening":"normal","weekendMorning":"crowded","weekendAfternoon":"crowded","weekendEvening":"normal"}',
+        '{"weekday0608":"empty","weekday0810":"empty","weekday1012":"empty","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"normal","weekday2022":"normal","weekend0608":"crowded","weekend0810":"crowded","weekend1012":"crowded","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"normal","weekend2022":"normal"}',
         3,
         3,
         '浅草観光の立ち寄りスポット'
@@ -266,7 +266,7 @@ VALUES (
         '["現金","クレカ"]',
         '["学生","地元の方"]',
         '["読書","勉強"]',
-        '{"weekdayMorning":"normal","weekdayAfternoon":"normal","weekdayEvening":"normal","weekendMorning":"normal","weekendAfternoon":"crowded","weekendEvening":"normal"}',
+        '{"weekday0608":"normal","weekday0810":"normal","weekday1012":"normal","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"normal","weekday2022":"normal","weekend0608":"normal","weekend0810":"normal","weekend1012":"normal","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"normal","weekend2022":"normal"}',
         4,
         4,
         '地元の学生に人気のサンプルカフェ5'

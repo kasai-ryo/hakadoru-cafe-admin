@@ -1,6 +1,7 @@
 import type {
   Cafe,
   CafeFormPayload,
+  CrowdLevel,
   CrowdMatrix,
   ImageCategoryKey,
 } from "@/app/types/cafe";
@@ -26,6 +27,7 @@ type CafeTableRow = {
   address_line3: string | null;
   address: string;
   access: string | null;
+  nearest_station: string | null;
   phone: string | null;
   status: Cafe["status"];
   time_limit: string | null;
@@ -51,7 +53,7 @@ type CafeTableRow = {
   payment_methods: string[] | null;
   customer_types: string[] | null;
   recommended_work: string[];
-  crowd_levels: CrowdMatrix;
+  crowd_levels: Partial<Record<string, CrowdLevel>> | null;
   ambience_casual: number;
   ambience_modern: number;
   ambassador_comment: string | null;
@@ -91,6 +93,7 @@ export function changePayloadToCafe(
     addressLine3: payload.addressLine3,
     address: combinedAddress,
     access: payload.access,
+    nearestStation: payload.nearestStation,
     phone: payload.phone,
     status: payload.status,
     timeLimit: payload.timeLimit,
@@ -197,6 +200,7 @@ export function buildCafeTableInsert(
     address_line3: payload.addressLine3 || null,
     address,
     access: payload.access || null,
+    nearest_station: payload.nearestStation || null,
     phone: payload.phone || null,
     status: payload.status,
     time_limit: payload.timeLimit || null,
@@ -216,7 +220,7 @@ export function buildCafeTableInsert(
     parking: payload.parking,
     smoking: payload.smoking,
     coffee_price: payload.coffeePrice || null,
-    bring_own_food: payload.bringOwnFood,
+    bring_own_food: normalizeBringOwnFood(payload.bringOwnFood),
     alcohol: payload.alcohol,
     services: payload.services,
     payment_methods: payload.paymentMethods,
@@ -231,6 +235,19 @@ export function buildCafeTableInsert(
     longitude: payload.longitude ?? null,
     // deleted_at columnはDB側のデフォルトに任せる
   };
+}
+
+function normalizeBringOwnFood(
+  value: unknown,
+): CafeFormPayload["bringOwnFood"] {
+  if (
+    value === "allowed" ||
+    value === "not_allowed" ||
+    value === "drinks_only"
+  ) {
+    return value;
+  }
+  return "not_allowed";
 }
 
 export function mapCafeRowToCafe(
@@ -252,6 +269,7 @@ export function mapCafeRowToCafe(
     addressLine3: row.address_line3 ?? "",
     address: row.address,
     access: row.access ?? "",
+    nearestStation: row.nearest_station ?? "",
     phone: row.phone ?? "",
     status: row.status,
     timeLimit: row.time_limit ?? "",
@@ -277,7 +295,7 @@ export function mapCafeRowToCafe(
     paymentMethods: row.payment_methods ?? [],
     customerTypes: row.customer_types ?? [],
     recommendedWorkStyles: row.recommended_work ?? [],
-    crowdMatrix: row.crowd_levels,
+    crowdMatrix: normalizeCrowdMatrix(row.crowd_levels),
     ambienceCasual: row.ambience_casual,
     ambienceModern: row.ambience_modern,
     ambassadorComment: row.ambassador_comment ?? "",
@@ -295,6 +313,46 @@ export function mapCafeRowToCafe(
     deleted_at: "deleted_at" in row ? row.deleted_at ?? null : null,
     updated_at: row.updated_at,
   };
+}
+
+const DEFAULT_CROWD_LEVEL: CrowdLevel = "normal";
+
+function createDefaultCrowdMatrix(): CrowdMatrix {
+  return {
+    weekday0608: DEFAULT_CROWD_LEVEL,
+    weekday0810: DEFAULT_CROWD_LEVEL,
+    weekday1012: DEFAULT_CROWD_LEVEL,
+    weekday1214: DEFAULT_CROWD_LEVEL,
+    weekday1416: DEFAULT_CROWD_LEVEL,
+    weekday1618: DEFAULT_CROWD_LEVEL,
+    weekday1820: DEFAULT_CROWD_LEVEL,
+    weekday2022: DEFAULT_CROWD_LEVEL,
+    weekend0608: DEFAULT_CROWD_LEVEL,
+    weekend0810: DEFAULT_CROWD_LEVEL,
+    weekend1012: DEFAULT_CROWD_LEVEL,
+    weekend1214: DEFAULT_CROWD_LEVEL,
+    weekend1416: DEFAULT_CROWD_LEVEL,
+    weekend1618: DEFAULT_CROWD_LEVEL,
+    weekend1820: DEFAULT_CROWD_LEVEL,
+    weekend2022: DEFAULT_CROWD_LEVEL,
+  };
+}
+
+function normalizeCrowdMatrix(
+  raw: Partial<Record<string, CrowdLevel>> | null | undefined,
+): CrowdMatrix {
+  const base = createDefaultCrowdMatrix();
+  if (!raw) return base;
+
+  const next: CrowdMatrix = { ...base };
+  (Object.keys(base) as Array<keyof CrowdMatrix>).forEach((key) => {
+    const value = raw[key];
+    if (value) {
+      next[key] = value;
+    }
+  });
+
+  return next;
 }
 
 function buildImageMaps(imageRows?: CafeImageRow[] | null) {

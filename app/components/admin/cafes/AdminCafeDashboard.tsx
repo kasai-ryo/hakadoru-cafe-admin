@@ -1,14 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import clsx from "clsx";
-import type { Cafe, CafeFormPayload } from "@/app/types/cafe";
+import type { Cafe } from "@/app/types/cafe";
 import {
   CafeFilterBar,
   type CafeFilterState,
 } from "@/app/components/admin/cafes/CafeFilterBar";
 import { CafeTable } from "@/app/components/admin/cafes/CafeTable";
-import { CafeFormDrawer } from "@/app/components/admin/cafes/CafeFormDrawer";
 
 interface AdminCafeDashboardProps {
   cafes: Cafe[];
@@ -26,11 +26,8 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
     search: "",
     area: "all",
     status: "all",
-    wifiOnly: false,
-    showDeleted: false,
+    showDeleted: true,
   });
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [editingCafe, setEditingCafe] = useState<Cafe | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -49,7 +46,7 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
       }
       if (
         filters.search &&
-        !`${cafe.name} ${cafe.area} ${cafe.address}`
+        !`${cafe.name} ${cafe.area} ${cafe.address} ${cafe.nearestStation}`
           .toLowerCase()
           .includes(filters.search.toLowerCase())
       ) {
@@ -65,9 +62,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
         if (cafe.status !== filters.status) {
           return false;
         }
-      }
-      if (filters.wifiOnly && !cafe.wifi) {
-        return false;
       }
       return true;
     });
@@ -92,76 +86,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
 
   const handleFilterChange = (nextFilters: CafeFilterState) => {
     setFilters(nextFilters);
-  };
-
-  const handleCreate = () => {
-    setEditingCafe(null);
-    setIsDrawerOpen(true);
-  };
-
-  const handleSave = async (payload: CafeFormPayload) => {
-    if (editingCafe) {
-      const response = await fetch(`/api/cafes/${editingCafe.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        let errorMessage = "カフェの更新に失敗しました。";
-        try {
-          const errorBody = await response.json();
-          if (Array.isArray(errorBody?.errors) && errorBody.errors.length > 0) {
-            errorMessage = errorBody.errors.join("\n");
-          } else if (typeof errorBody?.message === "string") {
-            errorMessage = errorBody.message;
-          }
-        } catch {
-          // ignore JSON parse errors
-        }
-        throw new Error(errorMessage);
-      }
-
-      const result = (await response.json()) as { data: Cafe };
-      if (!result?.data) {
-        throw new Error("更新結果の解析に失敗しました。");
-      }
-      setCafeList((prev) =>
-        prev.map((cafe) => (cafe.id === editingCafe.id ? result.data : cafe)),
-      );
-      return;
-    }
-
-    const response = await fetch("/api/cafes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      let errorMessage = "カフェの登録に失敗しました。";
-      try {
-        const errorBody = await response.json();
-        if (Array.isArray(errorBody?.errors) && errorBody.errors.length > 0) {
-          errorMessage = errorBody.errors.join("\n");
-        } else if (typeof errorBody?.message === "string") {
-          errorMessage = errorBody.message;
-        }
-      } catch {
-        // ignore JSON parse errors
-      }
-      throw new Error(errorMessage);
-    }
-
-    const result = (await response.json()) as { data: Cafe };
-    if (!result?.data) {
-      throw new Error("登録結果の解析に失敗しました。");
-    }
-    setCafeList((prev) => [result.data, ...prev]);
   };
 
   const lockedView = (
@@ -191,18 +115,26 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
                 カフェ管理
               </h1>
               <p className="mt-2 text-sm text-gray-600">
-                カフェの新規登録・更新・論理削除（アーカイブ）を行う管理画面です。
+                カフェの新規登録・更新・公開/非公開の切り替えを行う管理画面です。
               </p>
-              <p className="mt-1 text-xs text-red-500">
-                ※削除済みのカフェは復元できません。削除前に内容をご確認ください。
+              <p className="mt-1 text-xs text-gray-500">
+                ※非公開のカフェも初期表示で一覧に含まれます。必要に応じて絞り込みを調整してください。
               </p>
             </div>
-            <button
-              onClick={handleCreate}
-              className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-medium text-white shadow hover:bg-primary-dark"
-            >
-              ＋ 新規カフェ登録
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/admin/cafe-drafts"
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                一時保存一覧
+              </Link>
+              <Link
+                href="/admin/cafes/new"
+                className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-3 text-sm font-medium text-white shadow hover:bg-primary-dark"
+              >
+                ＋ 新規カフェ登録
+              </Link>
+            </div>
           </header>
 
           <div className="mt-6 rounded-2xl bg-white p-5 shadow">
@@ -215,16 +147,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
           </div>
         </>
       )}
-
-      <CafeFormDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => {
-          setIsDrawerOpen(false);
-          setEditingCafe(null);
-        }}
-        onSubmit={handleSave}
-        editingCafe={editingCafe}
-      />
 
     </section>
   );
