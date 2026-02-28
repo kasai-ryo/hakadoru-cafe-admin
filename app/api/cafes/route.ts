@@ -11,9 +11,18 @@ import {
   geocodeCafeAddress,
 } from "@/app/api/cafes/serverHelpers";
 import { getSupabaseServerClient } from "@/app/lib/supabaseServer";
+import { isAdminAuthenticatedFromCookies } from "@/app/lib/adminAuth";
 import type { Cafe, CafeFormPayload } from "@/app/types/cafe";
 
 export async function POST(request: Request) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   let payload: CafeFormPayload;
   try {
     payload = (await request.json()) as CafeFormPayload;

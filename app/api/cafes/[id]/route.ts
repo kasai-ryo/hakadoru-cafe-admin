@@ -9,6 +9,7 @@ import {
   geocodeCafeAddress,
 } from "@/app/api/cafes/serverHelpers";
 import { getSupabaseServerClient } from "@/app/lib/supabaseServer";
+import { isAdminAuthenticatedFromCookies } from "@/app/lib/adminAuth";
 import type { CafeFormPayload } from "@/app/types/cafe";
 
 type RouteContext = {
@@ -18,6 +19,14 @@ type RouteContext = {
 };
 
 export async function PUT(request: Request, context: RouteContext) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   const { id: cafeId } = await context.params;
   if (!cafeId) {
     return NextResponse.json(
@@ -161,6 +170,14 @@ export async function DELETE(
   _request: Request,
   context: RouteContext,
 ) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   const { id: cafeId } = await context.params;
   if (!cafeId) {
     return NextResponse.json(
@@ -210,6 +227,14 @@ export async function PATCH(
   request: Request,
   context: RouteContext,
 ) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   const { id: cafeId } = await context.params;
   if (!cafeId) {
     return NextResponse.json(

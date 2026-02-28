@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/app/lib/supabaseServer";
+import { isAdminAuthenticatedFromCookies } from "@/app/lib/adminAuth";
 
 type CafeDraftRow = {
   id: string;
@@ -14,6 +15,14 @@ type CafeDraftRow = {
 };
 
 export async function GET(request: Request) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json(
@@ -64,6 +73,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json(

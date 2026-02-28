@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import clsx from "clsx";
 import type { Cafe } from "@/app/types/cafe";
 import {
@@ -12,15 +12,16 @@ import { CafeTable } from "@/app/components/admin/cafes/CafeTable";
 
 interface AdminCafeDashboardProps {
   cafes: Cafe[];
+  initialAuthenticated: boolean;
 }
 
-const ADMIN_ID = "cafe";
-const ADMIN_PASSWORD = "hakadoru";
-const SESSION_KEY = "hakadoru-admin-session";
-
-export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export function AdminCafeDashboard({
+  cafes,
+  initialAuthenticated,
+}: AdminCafeDashboardProps) {
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuthenticated);
   const [authError, setAuthError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [cafeList, setCafeList] = useState<Cafe[]>(cafes);
   const [filters, setFilters] = useState<CafeFilterState>({
     search: "",
@@ -28,16 +29,6 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
     status: "all",
     showDeleted: true,
   });
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const stored = window.sessionStorage.getItem(SESSION_KEY);
-    if (stored === "authenticated") {
-      setIsAuthenticated(true);
-    }
-  }, []);
 
   const filteredCafes = useMemo(() => {
     return cafeList.filter((cafe) => {
@@ -72,15 +63,44 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
     return Array.from(unique);
   }, [cafeList]);
 
-  const handleLogin = (id: string, password: string) => {
-    if (id === ADMIN_ID && password === ADMIN_PASSWORD) {
-      setIsAuthenticated(true);
-      setAuthError("");
-      if (typeof window !== "undefined") {
-        window.sessionStorage.setItem(SESSION_KEY, "authenticated");
+  const handleLogin = async (id: string, password: string) => {
+    setIsLoggingIn(true);
+    setAuthError("");
+    try {
+      const response = await fetch("/api/admin/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, password }),
+      });
+      const data = (await response.json()) as { message?: string };
+      if (!response.ok) {
+        throw new Error(data.message ?? "ログインに失敗しました。");
       }
-    } else {
-      setAuthError("IDまたはパスワードが正しくありません。");
+      setIsAuthenticated(true);
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+    } catch (error) {
+      setAuthError(
+        (error as { message?: string }).message ??
+          "IDまたはパスワードが正しくありません。",
+      );
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/admin/auth/logout", {
+        method: "POST",
+      });
+    } finally {
+      setIsAuthenticated(false);
+      setAuthError("");
+      setCafeList([]);
     }
   };
 
@@ -96,7 +116,7 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
       <p className="mt-2 text-sm text-gray-500">
         IDとパスワードを入力してカフェ管理画面にアクセスしてください。
       </p>
-      <LoginForm onSubmit={handleLogin} error={authError} />
+      <LoginForm onSubmit={handleLogin} error={authError} isSubmitting={isLoggingIn} />
     </div>
   );
 
@@ -123,6 +143,12 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Link
+                href="/admin/requests"
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                リクエストを確認
+              </Link>
+              <Link
                 href="/admin/cafe-drafts"
                 className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
               >
@@ -134,6 +160,13 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
               >
                 ＋ 新規カフェ登録
               </Link>
+              <button
+                type="button"
+                onClick={() => void handleLogout()}
+                className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50"
+              >
+                ログアウト
+              </button>
             </div>
           </header>
 
@@ -153,17 +186,18 @@ export function AdminCafeDashboard({ cafes }: AdminCafeDashboardProps) {
 }
 
 interface LoginFormProps {
-  onSubmit: (id: string, password: string) => void;
+  onSubmit: (id: string, password: string) => Promise<void>;
+  isSubmitting: boolean;
   error?: string;
 }
 
-function LoginForm({ onSubmit, error }: LoginFormProps) {
+function LoginForm({ onSubmit, error, isSubmitting }: LoginFormProps) {
   const [id, setId] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    onSubmit(id, password);
+    void onSubmit(id, password);
   };
 
   return (
@@ -202,12 +236,13 @@ function LoginForm({ onSubmit, error }: LoginFormProps) {
       )}
       <button
         type="submit"
+        disabled={isSubmitting}
         className={clsx(
           "w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white",
-          "hover:bg-primary-dark",
+          "hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60",
         )}
       >
-        ログイン
+        {isSubmitting ? "ログイン中..." : "ログイン"}
       </button>
     </form>
   );

@@ -3,9 +3,18 @@
 import { NextResponse } from "next/server";
 import { uploadImagesToStorage } from "@/app/api/cafes/serverHelpers";
 import { getSupabaseServerClient } from "@/app/lib/supabaseServer";
+import { isAdminAuthenticatedFromCookies } from "@/app/lib/adminAuth";
 import type { CafeFormPayload, ImageCategoryKey } from "@/app/types/cafe";
 
 export async function POST(request: Request) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   const supabase = getSupabaseServerClient();
   if (!supabase) {
     return NextResponse.json(

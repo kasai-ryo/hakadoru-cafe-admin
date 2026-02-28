@@ -1,8 +1,9 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AdminCafeDetail } from "@/app/components/admin/cafes/AdminCafeDetail";
 import { getSupabaseServerClient } from "@/app/lib/supabaseServer";
 import { mapCafeRowToCafe } from "@/app/api/cafes";
 import { mockCafes } from "@/app/components/admin/cafes/mockData";
+import { isAdminAuthenticatedFromCookies } from "@/app/lib/adminAuth";
 import type { Cafe } from "@/app/types/cafe";
 
 interface DetailPageProps {
@@ -18,6 +19,11 @@ export default async function AdminCafeDetailPage({
   params,
   searchParams,
 }: DetailPageProps) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    redirect("/admin/cafes");
+  }
+
   const { id } = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const supabase = getSupabaseServerClient();

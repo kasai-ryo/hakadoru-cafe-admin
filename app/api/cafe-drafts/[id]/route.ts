@@ -2,6 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/app/lib/supabaseServer";
+import { isAdminAuthenticatedFromCookies } from "@/app/lib/adminAuth";
 
 type RouteContext = {
   params: Promise<{
@@ -13,6 +14,14 @@ export async function DELETE(
   _request: Request,
   context: RouteContext,
 ) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   const { id } = await context.params;
   if (!id) {
     return NextResponse.json(
@@ -52,6 +61,14 @@ export async function GET(
   _request: Request,
   context: RouteContext,
 ) {
+  const isAuthenticated = await isAdminAuthenticatedFromCookies();
+  if (!isAuthenticated) {
+    return NextResponse.json(
+      { message: "管理者ログインが必要です。" },
+      { status: 401 },
+    );
+  }
+
   const { id } = await context.params;
   if (!id) {
     return NextResponse.json(
