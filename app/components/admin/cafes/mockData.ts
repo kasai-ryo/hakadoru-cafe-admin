@@ -11,6 +11,7 @@ const baseCrowd = (
   weekday1618: "normal",
   weekday1820: "crowded",
   weekday2022: "crowded",
+  weekday2224: "crowded",
   weekend0608: "empty",
   weekend0810: "empty",
   weekend1012: "empty",
@@ -19,6 +20,7 @@ const baseCrowd = (
   weekend1618: "crowded",
   weekend1820: "crowded",
   weekend2022: "crowded",
+  weekend2224: "crowded",
   ...overrides,
 });
 

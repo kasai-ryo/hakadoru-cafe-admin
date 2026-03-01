@@ -156,6 +156,11 @@ const CROWD_TIME_ROWS: Array<{
     weekdayKey: "weekday2022",
     weekendKey: "weekend2022",
   },
+  {
+    label: "22:00-24:00",
+    weekdayKey: "weekday2224",
+    weekendKey: "weekend2224",
+  },
 ];
 
 const IMAGE_CATEGORIES: Array<{
@@ -196,6 +201,7 @@ const createEmptyCrowdMatrix = (): CrowdMatrix => ({
   weekday1618: "normal",
   weekday1820: "normal",
   weekday2022: "normal",
+  weekday2224: "normal",
   weekend0608: "normal",
   weekend0810: "normal",
   weekend1012: "normal",
@@ -204,6 +210,7 @@ const createEmptyCrowdMatrix = (): CrowdMatrix => ({
   weekend1618: "normal",
   weekend1820: "normal",
   weekend2022: "normal",
+  weekend2224: "normal",
 });
 
 function normalizeCrowdMatrix(

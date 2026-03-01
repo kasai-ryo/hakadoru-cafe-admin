@@ -554,6 +554,7 @@ function crowdItems(matrix: Cafe["crowdMatrix"]) {
     { label: "平日 16:00-18:00", value: matrix.weekday1618 },
     { label: "平日 18:00-20:00", value: matrix.weekday1820 },
     { label: "平日 20:00-22:00", value: matrix.weekday2022 },
+    { label: "平日 22:00-24:00", value: matrix.weekday2224 },
     { label: "休日 06:00-08:00", value: matrix.weekend0608 },
     { label: "休日 08:00-10:00", value: matrix.weekend0810 },
     { label: "休日 10:00-12:00", value: matrix.weekend1012 },
@@ -562,6 +563,7 @@ function crowdItems(matrix: Cafe["crowdMatrix"]) {
     { label: "休日 16:00-18:00", value: matrix.weekend1618 },
     { label: "休日 18:00-20:00", value: matrix.weekend1820 },
     { label: "休日 20:00-22:00", value: matrix.weekend2022 },
+    { label: "休日 22:00-24:00", value: matrix.weekend2224 },
   ];
 }
 

@@ -19,6 +19,7 @@ export type CrowdSlotKey =
   | "weekday1618"
   | "weekday1820"
   | "weekday2022"
+  | "weekday2224"
   | "weekend0608"
   | "weekend0810"
   | "weekend1012"
@@ -26,7 +27,8 @@ export type CrowdSlotKey =
   | "weekend1416"
   | "weekend1618"
   | "weekend1820"
-  | "weekend2022";
+  | "weekend2022"
+  | "weekend2224";
 
 export type CrowdMatrix = Record<CrowdSlotKey, CrowdLevel>;
 

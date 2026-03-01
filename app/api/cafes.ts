@@ -347,6 +347,7 @@ function createDefaultCrowdMatrix(): CrowdMatrix {
     weekday1618: DEFAULT_CROWD_LEVEL,
     weekday1820: DEFAULT_CROWD_LEVEL,
     weekday2022: DEFAULT_CROWD_LEVEL,
+    weekday2224: DEFAULT_CROWD_LEVEL,
     weekend0608: DEFAULT_CROWD_LEVEL,
     weekend0810: DEFAULT_CROWD_LEVEL,
     weekend1012: DEFAULT_CROWD_LEVEL,
@@ -355,6 +356,7 @@ function createDefaultCrowdMatrix(): CrowdMatrix {
     weekend1618: DEFAULT_CROWD_LEVEL,
     weekend1820: DEFAULT_CROWD_LEVEL,
     weekend2022: DEFAULT_CROWD_LEVEL,
+    weekend2224: DEFAULT_CROWD_LEVEL,
   };
 }
 

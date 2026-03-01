@@ -189,6 +189,7 @@ CREATE TABLE cafes (
     "weekday1618":"normal",
     "weekday1820":"normal",
     "weekday2022":"normal",
+    "weekday2224":"normal",
     "weekend0608":"normal",
     "weekend0810":"normal",
     "weekend1012":"normal",
@@ -196,7 +197,8 @@ CREATE TABLE cafes (
     "weekend1416":"normal",
     "weekend1618":"normal",
     "weekend1820":"normal",
-    "weekend2022":"normal"
+    "weekend2022":"normal",
+    "weekend2224":"normal"
   }'::jsonb,
   ambience_casual INT CHECK (ambience_casual >= 1 AND ambience_casual <= 5),
   ambience_modern INT CHECK (ambience_modern >= 1 AND ambience_modern <= 5),
