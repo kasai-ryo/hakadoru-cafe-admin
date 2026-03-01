@@ -90,6 +90,7 @@ export interface Cafe {
   coffeePrice: number;
   bringOwnFood: BringOwnFoodOption;
   alcohol: AlcoholOption;
+  mainMenu: string;
   services: string[];
   paymentMethods: string[];
   customerTypes: string[];
@@ -99,6 +100,9 @@ export interface Cafe {
   ambienceModern: number;
   ambassadorComment: string;
   website: string;
+  instagramUrl: string;
+  tiktokUrl: string;
+  smokingNote: string;
   latitude: number | null;
   longitude: number | null;
   imageMainPath: string;
@@ -145,6 +149,7 @@ export interface CafeFormPayload {
   coffeePrice: number;
   bringOwnFood: BringOwnFoodOption;
   alcohol: AlcoholOption;
+  mainMenu: string;
   services: string[];
   paymentMethods: string[];
   customerTypes: string[];
@@ -154,6 +159,9 @@ export interface CafeFormPayload {
   ambienceModern: number;
   ambassadorComment: string;
   website: string;
+  instagramUrl: string;
+  tiktokUrl: string;
+  smokingNote: string;
   latitude: number | null;
   longitude: number | null;
   images: Record<ImageCategoryKey, ImageUpload | null>;

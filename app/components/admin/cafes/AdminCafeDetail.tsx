@@ -186,40 +186,31 @@ export function AdminCafeDetail({
                 value: currentCafe.meetingRoom ? "あり" : "なし",
               },
               {
-                label: "途中離席",
-                value: currentCafe.allowsShortLeave ? "可" : "不可",
-              },
-              {
                 label: "個別ブース",
                 value: currentCafe.hasPrivateBooths ? "あり" : "なし",
               },
-              {
-                label: "駐車場",
-                value: currentCafe.parking ? "あり" : "なし",
-              },
               { label: "照明", value: lightingLabel(currentCafe.lighting) },
               { label: "禁煙 / 喫煙", value: smokingLabel(currentCafe.smoking) },
+              { label: "喫煙補足", value: currentCafe.smokingNote || "未設定" },
               {
                 label: "座席数",
                 value: currentCafe.seats ? `${currentCafe.seats}席` : "未設定",
               },
               { label: "コーヒー価格", value: priceLabel(currentCafe.coffeePrice) },
               { label: "アルコール提供", value: alcoholLabel(currentCafe.alcohol) },
+              { label: "主要メニュー", value: currentCafe.mainMenu || "未設定" },
               { label: "電話番号", value: currentCafe.phone || "未設定" },
               {
                 label: "公式サイト",
-                value: currentCafe.website ? (
-                  <a
-                    href={currentCafe.website}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-primary underline decoration-dotted underline-offset-4"
-                  >
-                    {currentCafe.website}
-                  </a>
-                ) : (
-                  "未設定"
-                ),
+                value: renderOptionalLink(currentCafe.website),
+              },
+              {
+                label: "Instagram",
+                value: renderOptionalLink(currentCafe.instagramUrl),
+              },
+              {
+                label: "TikTok",
+                value: renderOptionalLink(currentCafe.tiktokUrl),
               },
             ]}
           />
@@ -516,31 +507,40 @@ function lightingLabel(lighting: Cafe["lighting"]) {
 }
 
 function smokingLabel(smoking: Cafe["smoking"]) {
-  switch (smoking) {
-    case "no_smoking":
-      return "全席禁煙";
-    case "separated":
-      return "分煙";
-    case "e_cigarette":
-      return "電子タバコ可";
-    case "allowed":
-      return "喫煙可";
-    default:
-      return smoking;
+  if (smoking === "no_smoking") {
+    return "禁煙";
   }
+  return "喫煙可能";
 }
 
 function alcoholLabel(option: Cafe["alcohol"]) {
   switch (option) {
     case "available":
-      return "提供あり";
+      return "あり（昼・夜両方）";
     case "night_only":
-      return "夜のみ";
+      return "夜のみあり";
     case "unavailable":
-      return "提供なし";
+      return "なし";
     default:
       return option;
   }
+}
+
+function renderOptionalLink(value?: string | null) {
+  if (!value) {
+    return "未設定";
+  }
+
+  return (
+    <a
+      href={value}
+      target="_blank"
+      rel="noreferrer"
+      className="text-primary underline decoration-dotted underline-offset-4"
+    >
+      {value}
+    </a>
+  );
 }
 
 function crowdItems(matrix: Cafe["crowdMatrix"]) {

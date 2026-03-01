@@ -32,7 +32,6 @@ const REGULAR_HOLIDAY_OPTIONS = [
 
 const SERVICE_OPTIONS = [
   "テラス席あり",
-  "個室ブース",
   "24h営業",
   "モニター貸出あり",
   "窓際席あり",
@@ -58,12 +57,11 @@ const SUPABASE_STORAGE_BUCKET =
 const REQUIRED_FIELD_LABELS: Record<
   keyof Pick<
     CafeFormPayload,
-    "name" | "area" | "prefecture" | "postalCode" | "addressLine1" | "nearestStation"
+    "name" | "prefecture" | "postalCode" | "addressLine1" | "nearestStation"
   >,
   string
 > = {
   name: "店舗名",
-  area: "エリア",
   prefecture: "都道府県",
   postalCode: "郵便番号",
   addressLine1: "住所1",
@@ -293,6 +291,7 @@ const createEmptyForm = (): CafeFormPayload => ({
   coffeePrice: 0,
   bringOwnFood: "not_allowed",
   alcohol: "unavailable",
+  mainMenu: "",
   services: [],
   paymentMethods: [],
   customerTypes: [],
@@ -302,6 +301,9 @@ const createEmptyForm = (): CafeFormPayload => ({
   ambienceModern: 3,
   ambassadorComment: "",
   website: "",
+  instagramUrl: "",
+  tiktokUrl: "",
+  smokingNote: "",
   latitude: null,
   longitude: null,
   images: createEmptyImages(),
@@ -339,6 +341,7 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   coffeePrice: cafe.coffeePrice,
   bringOwnFood: cafe.bringOwnFood,
   alcohol: cafe.alcohol,
+  mainMenu: cafe.mainMenu,
   services: cafe.services,
   paymentMethods: cafe.paymentMethods,
   customerTypes: cafe.customerTypes,
@@ -348,6 +351,9 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   ambienceModern: cafe.ambienceModern,
   ambassadorComment: cafe.ambassadorComment,
   website: cafe.website,
+  instagramUrl: cafe.instagramUrl,
+  tiktokUrl: cafe.tiktokUrl,
+  smokingNote: cafe.smokingNote,
   latitude: cafe.latitude,
   longitude: cafe.longitude,
   images: {
@@ -509,23 +515,32 @@ async function fetchDraftSnapshotById(
 async function createDraftSnapshot(
   state: CafeFormPayload,
   editingCafe: Cafe | null,
-) {
+  draftId?: string | null,
+): Promise<{ id: string; savedAt: string }> {
   const response = await fetch("/api/cafe-drafts", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      draftId: draftId ?? null,
       editingCafeId: editingCafe?.id ?? null,
       editingCafeName: editingCafe?.name ?? null,
       cafeName: state.name || editingCafe?.name || "",
       payload: serializeFormState(state),
     }),
   });
-  const data = (await response.json()) as { message?: string };
+  const data = (await response.json()) as {
+    message?: string;
+    data?: { id: string; savedAt: string };
+  };
   if (!response.ok) {
     throw new Error(data.message ?? "一時保存に失敗しました。");
   }
+  if (!data.data?.id) {
+    throw new Error("一時保存レスポンスの解析に失敗しました。");
+  }
+  return data.data;
 }
 
 async function uploadDraftImages(
@@ -644,6 +659,7 @@ export function CafeFormDrawer({
   const [draftSaveFeedback, setDraftSaveFeedback] =
     useState<DraftSaveFeedback>(null);
   const [draftSnapshots, setDraftSnapshots] = useState<DraftSnapshotItem[]>([]);
+  const [activeDraftSnapshotId, setActiveDraftSnapshotId] = useState<string | null>(null);
   const [isDraftSnapshotLoading, setIsDraftSnapshotLoading] = useState(false);
   const [isDraftSnapshotSaving, setIsDraftSnapshotSaving] = useState(false);
   const [isPostalLookupLoading, setIsPostalLookupLoading] =
@@ -675,8 +691,9 @@ export function CafeFormDrawer({
     setPostalLookupFeedback(null);
     setDraftSaveFeedback(null);
     setDraftSnapshots([]);
+    setActiveDraftSnapshotId(initialDraftSnapshotId ?? null);
     setIsPostalLookupLoading(false);
-  }, [isOpen, editingCafe]);
+  }, [isOpen, editingCafe, initialDraftSnapshotId]);
 
   useEffect(() => {
     if (
@@ -742,6 +759,7 @@ export function CafeFormDrawer({
         const snapshot = await fetchDraftSnapshotById(initialDraftSnapshotId);
         if (cancelled) return;
         setFormState(deserializeFormState(snapshot.payload));
+        setActiveDraftSnapshotId(snapshot.id);
         setDraftSaveFeedback({
           type: "success",
           message: `一時保存を復元しました（${formatDraftSnapshotTime(snapshot.savedAt)}）`,
@@ -778,7 +796,12 @@ export function CafeFormDrawer({
       if (stateForSave !== formState) {
         setFormState(stateForSave);
       }
-      await createDraftSnapshot(stateForSave, editingCafe);
+      const saved = await createDraftSnapshot(
+        stateForSave,
+        editingCafe,
+        activeDraftSnapshotId,
+      );
+      setActiveDraftSnapshotId(saved.id);
       const now = new Date();
       const hh = `${now.getHours()}`.padStart(2, "0");
       const mm = `${now.getMinutes()}`.padStart(2, "0");
@@ -863,7 +886,18 @@ export function CafeFormDrawer({
     }));
   };
 
-  const handleImageFile = (category: ImageCategoryKey, file: File) => {
+  const handleImageFile = async (category: ImageCategoryKey, file: File) => {
+    let normalizedFile = file;
+    try {
+      normalizedFile = await convertHeicToJpegIfNeeded(file);
+    } catch (error) {
+      console.error("[CafeFormDrawer] Failed to convert HEIC image", error);
+      setError(
+        "HEIC画像の変換に失敗しました。このHEIC形式はブラウザ/変換ライブラリで未対応の可能性があります。iPhone設定を『互換性優先』に変更するか、JPEG/PNG/WebP形式でアップロードしてください。",
+      );
+      return;
+    }
+
     const prev = formState.images[category];
     if (prev?.previewUrl?.startsWith("blob:")) {
       URL.revokeObjectURL(prev.previewUrl);
@@ -871,9 +905,9 @@ export function CafeFormDrawer({
     const storagePath = generateStoragePath(
       formState.name,
       category,
-      file.name,
+      normalizedFile.name,
     );
-    const previewUrl = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(normalizedFile);
     const baseEntry: ImageUpload = {
       id: prev?.id ?? crypto.randomUUID(),
       storagePath,
@@ -906,7 +940,7 @@ export function CafeFormDrawer({
     reader.onerror = () => {
       console.error("画像の読み込みに失敗しました。");
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(normalizedFile);
   };
 
   const handleImageCaption = (category: ImageCategoryKey, caption: string) => {
@@ -943,7 +977,6 @@ export function CafeFormDrawer({
   const handleImageNext = async () => {
     const requiredFields: Array<keyof typeof REQUIRED_FIELD_LABELS> = [
       "name",
-      "area",
       "prefecture",
       "postalCode",
       "addressLine1",
@@ -975,6 +1008,20 @@ export function CafeFormDrawer({
     console.log("[CafeFormDrawer] Submitting payload", payloadToSubmit);
     try {
       await onSubmit(payloadToSubmit);
+      if (activeDraftSnapshotId) {
+        try {
+          await removeDraftSnapshot(activeDraftSnapshotId);
+          setActiveDraftSnapshotId(null);
+          if (showDraftSnapshotList) {
+            await refreshDraftSnapshots();
+          }
+        } catch (cleanupError) {
+          console.error(
+            "[CafeFormDrawer] Failed to cleanup draft snapshot after submit",
+            cleanupError,
+          );
+        }
+      }
       jumpToStep(2);
     } catch (submitError) {
       console.error("[CafeFormDrawer] Failed to submit form", submitError);
@@ -989,6 +1036,7 @@ export function CafeFormDrawer({
 
   const handleRestart = () => {
     setFormState(createEmptyForm());
+    setActiveDraftSnapshotId(null);
     jumpToStep(0);
     setError("");
     setPostalLookupFeedback(null);
@@ -1004,6 +1052,7 @@ export function CafeFormDrawer({
       return;
     }
     setFormState(deserializeFormState(snapshot.payload));
+    setActiveDraftSnapshotId(snapshot.id);
     setDraftSaveFeedback({
       type: "success",
       message: `一時保存を復元しました（${formatDraftSnapshotTime(snapshot.savedAt)}）`,
@@ -1021,6 +1070,9 @@ export function CafeFormDrawer({
     }
     try {
       await removeDraftSnapshot(snapshotId);
+      if (snapshotId === activeDraftSnapshotId) {
+        setActiveDraftSnapshotId(null);
+      }
       await refreshDraftSnapshots();
       setDraftSaveFeedback({
         type: "success",
@@ -1392,7 +1444,6 @@ function InfoStep({
             options={areas}
             value={formState.area}
             placeholder="エリアを選択"
-            required
             onChange={(value) => onChange("area", value)}
           />
           <SelectField
@@ -1434,6 +1485,18 @@ function InfoStep({
           value={formState.website}
           placeholder="https://example.com"
           onChange={(value) => onChange("website", value)}
+        />
+        <TextField
+          label="Instagram URL"
+          value={formState.instagramUrl}
+          placeholder="https://instagram.com/..."
+          onChange={(value) => onChange("instagramUrl", value)}
+        />
+        <TextField
+          label="TikTok URL"
+          value={formState.tiktokUrl}
+          placeholder="https://tiktok.com/@..."
+          onChange={(value) => onChange("tiktokUrl", value)}
         />
       </Section>
 
@@ -1610,25 +1673,28 @@ function InfoStep({
             label="禁煙・喫煙"
             required
             options={[
-              { label: "全席禁煙", value: "no_smoking" },
-              { label: "分煙", value: "separated" },
-              { label: "電子タバコ可", value: "e_cigarette" },
-              { label: "喫煙可", value: "allowed" },
-              { label: "不明", value: "unknown" },
+              { label: "禁煙", value: "no_smoking" },
+              { label: "喫煙可能", value: "allowed" },
             ]}
             value={formState.smoking}
             onChange={(value) =>
               onChange("smoking", value as CafeFormPayload["smoking"])
             }
           />
+          <TextAreaField
+            label="喫煙補足"
+            value={formState.smokingNote}
+            rows={2}
+            placeholder="例: テラス席のみ喫煙可能"
+            onChange={(value) => onChange("smokingNote", value)}
+          />
           <SelectField
             label="アルコール提供"
             required
             options={[
-              { label: "あり", value: "available" },
+              { label: "あり（昼・夜両方）", value: "available" },
               { label: "夜のみあり", value: "night_only" },
               { label: "なし", value: "unavailable" },
-              { label: "不明", value: "unknown" },
             ]}
             value={formState.alcohol}
             onChange={(value) =>
@@ -1685,6 +1751,14 @@ function InfoStep({
           placeholder="おすすめポイントや注意点を記載"
           rows={5}
           onChange={(value) => onChange("ambassadorComment", value)}
+        />
+        <TextAreaField
+          label="主要メニュー"
+          value={formState.mainMenu}
+          placeholder="人気メニューや価格帯など（1000文字まで）"
+          rows={4}
+          maxLength={1000}
+          onChange={(value) => onChange("mainMenu", value)}
         />
       </Section>
 
@@ -1940,12 +2014,14 @@ function TextAreaField({
   value,
   placeholder,
   rows = 3,
+  maxLength,
   onChange,
 }: {
   label: string;
   value: string;
   placeholder?: string;
   rows?: number;
+  maxLength?: number;
   onChange: (value: string) => void;
 }) {
   return (
@@ -1955,9 +2031,15 @@ function TextAreaField({
         value={value}
         placeholder={placeholder}
         rows={rows}
+        maxLength={maxLength}
         onChange={(event) => onChange(event.target.value)}
         className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
       />
+      {typeof maxLength === "number" && (
+        <span className="mt-1 block text-right text-xs text-gray-500">
+          {value.length}/{maxLength}
+        </span>
+      )}
     </label>
   );
 }
@@ -2350,4 +2432,170 @@ function generateStoragePath(
   const ext = originalName.split(".").pop() ?? "jpg";
   const timestamp = formatTimestamp(new Date());
   return `cafes/${timestamp}/${category}-${Date.now()}.${ext}`;
+}
+
+function isHeicOrHeifFile(file: File) {
+  const fileName = file.name.toLowerCase();
+  const mimeType = file.type.toLowerCase();
+  return (
+    mimeType.includes("heic") ||
+    mimeType.includes("heif") ||
+    fileName.endsWith(".heic") ||
+    fileName.endsWith(".heif")
+  );
+}
+
+async function convertHeicToJpegIfNeeded(file: File): Promise<File> {
+  const heicDetected = await detectHeicFile(file);
+  if (!heicDetected) {
+    return file;
+  }
+
+  const jpegBlob = await convertHeicBlobToJpeg(file);
+
+  const baseName = file.name.replace(/\.(heic|heif)$/i, "");
+  return new File([jpegBlob], `${baseName}.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
+}
+
+async function detectHeicFile(file: File): Promise<boolean> {
+  if (isHeicOrHeifFile(file)) {
+    return true;
+  }
+  try {
+    const mod = await import("heic-to");
+    const isHeic = mod?.isHeic as
+      | ((target: Blob) => Promise<boolean>)
+      | undefined;
+    if (typeof isHeic === "function") {
+      return await isHeic(file);
+    }
+  } catch {
+    // ignore and treat as non-HEIC
+  }
+  return false;
+}
+
+async function convertHeicBlobToJpeg(file: File): Promise<Blob> {
+  // First, try heic-to (primary converter).
+  try {
+    const mod = await import("heic-to");
+    const heicTo = mod?.heicTo as
+      | ((params: {
+          blob: Blob;
+          type: string;
+          quality?: number;
+        }) => Promise<Blob>)
+      | undefined;
+    if (typeof heicTo === "function") {
+      const converted = await heicTo({
+        blob: file,
+        type: "image/jpeg",
+        quality: 0.92,
+      });
+      if (
+        converted &&
+        typeof converted === "object" &&
+        "size" in converted &&
+        "type" in converted &&
+        typeof (converted as Blob).arrayBuffer === "function"
+      ) {
+        return converted as Blob;
+      }
+      throw new Error("heic-to returned an unsupported result");
+    }
+    throw new Error("heic-to module did not export heicTo");
+  } catch (error) {
+    console.error("[CafeFormDrawer] heic-to conversion failed", error);
+  }
+
+  // Second, try heic2any.
+  try {
+    const mod = await import("heic2any");
+    const heic2any = (mod?.default ?? mod) as (params: {
+        blob: Blob;
+        toType: string;
+        quality?: number;
+      }) => Promise<Blob | Blob[]>;
+    if (typeof heic2any === "function") {
+      const converted = await heic2any({
+        blob: file,
+        toType: "image/jpeg",
+        quality: 0.92,
+      });
+      const first = Array.isArray(converted) ? converted[0] : converted;
+      // Some bundlers/environments may return a Blob-like object where
+      // `instanceof Blob` is unreliable. Accept by shape as well.
+      if (
+        first &&
+        typeof first === "object" &&
+        "size" in first &&
+        "type" in first &&
+        typeof (first as Blob).arrayBuffer === "function"
+      ) {
+        return first as Blob;
+      }
+      throw new Error("heic2any returned an unsupported result");
+    }
+    throw new Error("heic2any module did not export a function");
+  } catch (error) {
+    console.error("[CafeFormDrawer] heic2any conversion failed", error);
+  }
+
+  // Final fallback: this only works on browsers that can decode HEIC natively.
+  const dataUrl = await readFileAsDataUrl(file);
+  const image = await loadImage(dataUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = image.naturalWidth || image.width;
+  canvas.height = image.naturalHeight || image.height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas context unavailable");
+  }
+  context.drawImage(image, 0, 0);
+
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Canvas toBlob failed"));
+          return;
+        }
+        resolve(blob);
+      },
+      "image/jpeg",
+      0.92,
+    );
+  });
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        reject(new Error("Invalid file reader result"));
+        return;
+      }
+      resolve(reader.result);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("File read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () =>
+      reject(
+        new Error(
+          "Image decode failed (HEIC is likely unsupported by this browser)",
+        ),
+      );
+    image.src = src;
+  });
 }

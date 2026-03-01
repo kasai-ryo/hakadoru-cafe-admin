@@ -90,6 +90,7 @@ export async function POST(request: Request) {
   }
 
   let body: {
+    draftId?: string | null;
     editingCafeId?: string | null;
     editingCafeName?: string | null;
     cafeName?: string | null;
@@ -118,17 +119,26 @@ export async function POST(request: Request) {
     payload: body.payload,
   };
 
-  const { data, error } = await supabase
-    .from("cafe_drafts")
-    .insert(insertPayload)
-    .select("*")
-    .single();
+  const query = body.draftId
+    ? supabase
+        .from("cafe_drafts")
+        .update(insertPayload)
+        .eq("id", body.draftId)
+        .select("*")
+        .single()
+    : supabase
+        .from("cafe_drafts")
+        .insert(insertPayload)
+        .select("*")
+        .single();
+
+  const { data, error } = await query;
 
   if (error || !data) {
-    console.error("[cafe-drafts:POST] Supabase insert failed", error);
+    console.error("[cafe-drafts:POST] Supabase upsert failed", error);
     return NextResponse.json(
       {
-        message: "一時保存の作成に失敗しました。",
+        message: "一時保存の保存に失敗しました。",
         detail: String(error?.message ?? error),
       },
       { status: 500 },
@@ -143,6 +153,6 @@ export async function POST(request: Request) {
         savedAt: row.updated_at ?? row.created_at,
       },
     },
-    { status: 201 },
+    { status: body.draftId ? 200 : 201 },
   );
 }

@@ -49,6 +49,7 @@ type CafeTableRow = {
   coffee_price: number | null;
   bring_own_food: Cafe["bringOwnFood"];
   alcohol: Cafe["alcohol"];
+  main_menu: string | null;
   services: string[] | null;
   payment_methods: string[] | null;
   customer_types: string[] | null;
@@ -58,6 +59,9 @@ type CafeTableRow = {
   ambience_modern: number;
   ambassador_comment: string | null;
   website: string | null;
+  instagram_url: string | null;
+  tiktok_url: string | null;
+  smoking_note: string | null;
   latitude: number | null;
   longitude: number | null;
   deleted_at?: string | null;
@@ -118,6 +122,7 @@ export function changePayloadToCafe(
     coffeePrice: payload.coffeePrice,
     bringOwnFood: payload.bringOwnFood,
     alcohol: payload.alcohol,
+    mainMenu: payload.mainMenu,
     services: payload.services,
     paymentMethods: payload.paymentMethods,
     customerTypes: payload.customerTypes,
@@ -127,6 +132,9 @@ export function changePayloadToCafe(
     ambienceModern: payload.ambienceModern,
     ambassadorComment: payload.ambassadorComment,
     website: payload.website,
+    instagramUrl: payload.instagramUrl,
+    tiktokUrl: payload.tiktokUrl,
+    smokingNote: payload.smokingNote,
     latitude: payload.latitude ?? base?.latitude ?? null,
     longitude: payload.longitude ?? base?.longitude ?? null,
     imageMainPath: images.main?.storagePath || base?.imageMainPath || "",
@@ -222,6 +230,7 @@ export function buildCafeTableInsert(
     coffee_price: payload.coffeePrice || null,
     bring_own_food: normalizeBringOwnFood(payload.bringOwnFood),
     alcohol: payload.alcohol,
+    main_menu: payload.mainMenu || null,
     services: payload.services,
     payment_methods: payload.paymentMethods,
     customer_types: payload.customerTypes,
@@ -231,6 +240,9 @@ export function buildCafeTableInsert(
     ambience_modern: payload.ambienceModern,
     ambassador_comment: payload.ambassadorComment || null,
     website: payload.website || null,
+    instagram_url: payload.instagramUrl || null,
+    tiktok_url: payload.tiktokUrl || null,
+    smoking_note: payload.smokingNote || null,
     latitude: payload.latitude ?? null,
     longitude: payload.longitude ?? null,
     // deleted_at columnはDB側のデフォルトに任せる
@@ -291,6 +303,7 @@ export function mapCafeRowToCafe(
     coffeePrice: row.coffee_price ?? 0,
     bringOwnFood: row.bring_own_food,
     alcohol: row.alcohol,
+    mainMenu: row.main_menu ?? "",
     services: row.services ?? [],
     paymentMethods: row.payment_methods ?? [],
     customerTypes: row.customer_types ?? [],
@@ -300,6 +313,9 @@ export function mapCafeRowToCafe(
     ambienceModern: row.ambience_modern,
     ambassadorComment: row.ambassador_comment ?? "",
     website: row.website ?? "",
+    instagramUrl: row.instagram_url ?? "",
+    tiktokUrl: row.tiktok_url ?? "",
+    smokingNote: row.smoking_note ?? "",
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
     imageMainPath: pathMap.main ?? "",

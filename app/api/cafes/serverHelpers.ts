@@ -11,7 +11,6 @@ export const REQUIRED_TEXT_FIELDS: Array<
     CafeFormPayload,
     | "name"
     | "facilityType"
-    | "area"
     | "prefecture"
     | "postalCode"
     | "addressLine1"
@@ -19,12 +18,11 @@ export const REQUIRED_TEXT_FIELDS: Array<
     | "nearestStation"
   >
 > = [
-    "name",
-    "facilityType",
-    "area",
-    "prefecture",
-    "postalCode",
-    "addressLine1",
+  "name",
+  "facilityType",
+  "prefecture",
+  "postalCode",
+  "addressLine1",
     "addressLine2",
     "nearestStation",
   ];
@@ -75,6 +73,13 @@ export function validateCafePayload(payload: Partial<CafeFormPayload>) {
     }
   });
 
+  if (
+    typeof payload.mainMenu === "string" &&
+    payload.mainMenu.length > 1000
+  ) {
+    errors.push("mainMenuは1000文字以内で入力してください");
+  }
+
   return errors;
 }
 
@@ -117,12 +122,15 @@ function parseBase64(data: string) {
   if (typeof data !== "string" || data.length === 0) {
     throw new Error("画像データが不正です。");
   }
-  const match = data.match(/^data:(.+);base64,(.+)$/);
-  if (match) {
-    return {
-      contentType: match[1],
-      base64Payload: match[2],
-    };
+  if (data.startsWith("data:")) {
+    const base64Token = ";base64,";
+    const markerIndex = data.indexOf(base64Token);
+    if (markerIndex > 5) {
+      return {
+        contentType: data.slice(5, markerIndex) || "image/jpeg",
+        base64Payload: data.slice(markerIndex + base64Token.length),
+      };
+    }
   }
   return {
     contentType: "image/jpeg",
