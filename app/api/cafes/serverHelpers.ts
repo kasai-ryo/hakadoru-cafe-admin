@@ -80,6 +80,20 @@ export function validateCafePayload(payload: Partial<CafeFormPayload>) {
     errors.push("mainMenuは1000文字以内で入力してください");
   }
 
+  if (
+    typeof payload.smokingNote === "string" &&
+    payload.smokingNote.length > 1000
+  ) {
+    errors.push("smokingNoteは1000文字以内で入力してください");
+  }
+
+  if (
+    typeof payload.equipmentNote === "string" &&
+    payload.equipmentNote.length > 1000
+  ) {
+    errors.push("equipmentNoteは1000文字以内で入力してください");
+  }
+
   return errors;
 }
 

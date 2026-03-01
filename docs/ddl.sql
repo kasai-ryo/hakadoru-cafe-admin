@@ -201,6 +201,7 @@ CREATE TABLE cafes (
   ambience_casual INT CHECK (ambience_casual >= 1 AND ambience_casual <= 5),
   ambience_modern INT CHECK (ambience_modern >= 1 AND ambience_modern <= 5),
   ambassador_comment TEXT,
+  equipment_note TEXT,
   deleted_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -304,6 +305,8 @@ COMMENT ON COLUMN cafes.ambience_casual IS '雰囲気：カジュアル度（1-5
 COMMENT ON COLUMN cafes.ambience_modern IS '雰囲気：モダン度（1-5）';
 
 COMMENT ON COLUMN cafes.ambassador_comment IS 'アンバサダーコメント';
+
+COMMENT ON COLUMN cafes.equipment_note IS '設備補足（自由入力）';
 
 COMMENT ON COLUMN cafes.latitude IS '緯度';
 

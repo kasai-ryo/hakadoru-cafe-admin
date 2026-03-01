@@ -192,6 +192,7 @@ export function AdminCafeDetail({
               { label: "照明", value: lightingLabel(currentCafe.lighting) },
               { label: "禁煙 / 喫煙", value: smokingLabel(currentCafe.smoking) },
               { label: "喫煙補足", value: currentCafe.smokingNote || "未設定" },
+              { label: "equipment_note（設備補足）", value: currentCafe.equipmentNote || "未設定" },
               {
                 label: "座席数",
                 value: currentCafe.seats ? `${currentCafe.seats}席` : "未設定",

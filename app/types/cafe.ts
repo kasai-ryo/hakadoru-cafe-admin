@@ -103,6 +103,7 @@ export interface Cafe {
   instagramUrl: string;
   tiktokUrl: string;
   smokingNote: string;
+  equipmentNote: string;
   latitude: number | null;
   longitude: number | null;
   imageMainPath: string;
@@ -162,6 +163,7 @@ export interface CafeFormPayload {
   instagramUrl: string;
   tiktokUrl: string;
   smokingNote: string;
+  equipmentNote: string;
   latitude: number | null;
   longitude: number | null;
   images: Record<ImageCategoryKey, ImageUpload | null>;

@@ -62,6 +62,7 @@ type CafeTableRow = {
   instagram_url: string | null;
   tiktok_url: string | null;
   smoking_note: string | null;
+  equipment_note: string | null;
   latitude: number | null;
   longitude: number | null;
   deleted_at?: string | null;
@@ -135,6 +136,7 @@ export function changePayloadToCafe(
     instagramUrl: payload.instagramUrl,
     tiktokUrl: payload.tiktokUrl,
     smokingNote: payload.smokingNote,
+    equipmentNote: payload.equipmentNote,
     latitude: payload.latitude ?? base?.latitude ?? null,
     longitude: payload.longitude ?? base?.longitude ?? null,
     imageMainPath: images.main?.storagePath || base?.imageMainPath || "",
@@ -243,6 +245,7 @@ export function buildCafeTableInsert(
     instagram_url: payload.instagramUrl || null,
     tiktok_url: payload.tiktokUrl || null,
     smoking_note: payload.smokingNote || null,
+    equipment_note: payload.equipmentNote || null,
     latitude: payload.latitude ?? null,
     longitude: payload.longitude ?? null,
     // deleted_at columnはDB側のデフォルトに任せる
@@ -316,6 +319,7 @@ export function mapCafeRowToCafe(
     instagramUrl: row.instagram_url ?? "",
     tiktokUrl: row.tiktok_url ?? "",
     smokingNote: row.smoking_note ?? "",
+    equipmentNote: row.equipment_note ?? "",
     latitude: row.latitude ?? null,
     longitude: row.longitude ?? null,
     imageMainPath: pathMap.main ?? "",

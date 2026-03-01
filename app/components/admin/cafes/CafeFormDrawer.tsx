@@ -304,6 +304,7 @@ const createEmptyForm = (): CafeFormPayload => ({
   instagramUrl: "",
   tiktokUrl: "",
   smokingNote: "",
+  equipmentNote: "",
   latitude: null,
   longitude: null,
   images: createEmptyImages(),
@@ -354,6 +355,7 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   instagramUrl: cafe.instagramUrl,
   tiktokUrl: cafe.tiktokUrl,
   smokingNote: cafe.smokingNote,
+  equipmentNote: cafe.equipmentNote,
   latitude: cafe.latitude,
   longitude: cafe.longitude,
   images: {
@@ -1713,6 +1715,14 @@ function InfoStep({
           options={RECOMMENDED_WORK_OPTIONS}
           values={formState.recommendedWorkStyles}
           onToggle={(value) => onChipToggle("recommendedWorkStyles", value)}
+        />
+        <TextAreaField
+          label="設備補足"
+          value={formState.equipmentNote}
+          rows={3}
+          placeholder="設備に関する補足情報（1000文字まで）"
+          maxLength={1000}
+          onChange={(value) => onChange("equipmentNote", value)}
         />
       </Section>
 
