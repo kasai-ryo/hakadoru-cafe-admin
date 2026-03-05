@@ -53,6 +53,27 @@ const SUPABASE_PUBLIC_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "") ?? "";
 const SUPABASE_STORAGE_BUCKET =
   process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ?? "cafeimages";
+const IMAGE_MAX_UPLOAD_MB = Number(process.env.NEXT_PUBLIC_IMAGE_MAX_UPLOAD_MB ?? "5");
+const MAX_IMAGE_UPLOAD_BYTES =
+  Number.isFinite(IMAGE_MAX_UPLOAD_MB) && IMAGE_MAX_UPLOAD_MB > 0
+    ? IMAGE_MAX_UPLOAD_MB * 1024 * 1024
+    : 5 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 2048;
+const MIN_IMAGE_DIMENSION = 640;
+const MIN_JPEG_QUALITY = 0.55;
+
+function generateClientId() {
+  const cryptoRef = globalThis.crypto;
+  if (cryptoRef?.randomUUID) {
+    return cryptoRef.randomUUID();
+  }
+  if (cryptoRef?.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    cryptoRef.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  return `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`;
+}
 
 const REQUIRED_FIELD_LABELS: Record<
   keyof Pick<
@@ -172,12 +193,12 @@ const IMAGE_CATEGORIES: Array<{
     {
       key: "main",
       label: "メイン画像",
-      required: true,
+      required: false,
       note: "※サムネイルに利用されます",
     },
-    { key: "exterior", label: "外観", required: true },
-    { key: "interior", label: "内観", required: true },
-    { key: "power", label: "電源席", required: true, note: "※電源タップが見えるような画像を登録してください", },
+    { key: "exterior", label: "外観", required: false },
+    { key: "interior", label: "内観", required: false },
+    { key: "power", label: "電源席", required: false, note: "※電源タップが見えるような画像を登録してください", },
     { key: "drink", label: "ドリンク", required: false },
     { key: "food", label: "フード", required: false },
     { key: "other1", label: "その他1", required: false },
@@ -425,7 +446,7 @@ function createImageState(path?: string | null, caption?: string | null): ImageU
   if (!path) return null;
   const previewUrl = buildPublicImageUrl(path);
   return {
-    id: crypto.randomUUID(),
+    id: generateClientId(),
     storagePath: path,
     previewUrl,
     caption: caption ?? "",
@@ -474,7 +495,7 @@ function deserializeFormState(serialized: SerializedFormState): CafeFormPayload 
       next.images[key] = null;
     } else {
       next.images[key] = {
-        id: entry.id ?? crypto.randomUUID(),
+        id: entry.id ?? generateClientId(),
         storagePath: entry.storagePath,
         previewUrl: buildPublicImageUrl(entry.storagePath),
         caption: entry.caption ?? "",
@@ -906,6 +927,16 @@ export function CafeFormDrawer({
       );
       return;
     }
+    try {
+      normalizedFile = await compressImageForUpload(normalizedFile);
+    } catch (error) {
+      console.error("[CafeFormDrawer] Failed to compress image", error);
+      setError(
+        (error as { message?: string }).message ??
+          `画像サイズの調整に失敗しました。画像を小さくして再度アップロードしてください（上限: ${IMAGE_MAX_UPLOAD_MB}MB）。`,
+      );
+      return;
+    }
 
     const prev = formState.images[category];
     if (prev?.previewUrl?.startsWith("blob:")) {
@@ -918,7 +949,7 @@ export function CafeFormDrawer({
     );
     const previewUrl = URL.createObjectURL(normalizedFile);
     const baseEntry: ImageUpload = {
-      id: prev?.id ?? crypto.randomUUID(),
+      id: prev?.id ?? generateClientId(),
       storagePath,
       previewUrl,
       caption: prev?.caption ?? "",
@@ -998,17 +1029,6 @@ export function CafeFormDrawer({
       );
       setError(messages.join("\n"));
       jumpToStep(0);
-      return;
-    }
-    const missingImages = IMAGE_CATEGORIES.filter(
-      (category) => category.required && !formState.images[category.key],
-    );
-    if (missingImages.length > 0) {
-      const imageMessages = missingImages.map(
-        (category) => `${category.label}は必須入力です`,
-      );
-      setError(imageMessages.join("\n"));
-      scrollDrawerToTop();
       return;
     }
     setError("");
@@ -1818,6 +1838,9 @@ function ImageStep({
         <p className="text-xs text-gray-500">
           ※アップロード可能形式：JPEG / PNG / WebP、ファイルサイズは5MB以下
         </p>
+        <p className="text-xs text-gray-500">
+          ※画像は任意です。未登録のまま保存して、あとから追加できます
+        </p>
       </section>
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -1918,7 +1941,7 @@ function ImageUploadCard({
           htmlFor={inputId}
           className="flex-1 cursor-pointer rounded-full bg-gray-900 px-5 py-2 text-center text-sm font-semibold text-white hover:bg-gray-800"
         >
-          写真を差し替える
+          {entry ? "写真を差し替える" : "写真をアップロード"}
         </label>
         <input
           type="text"
@@ -2462,6 +2485,88 @@ function isHeicOrHeifFile(file: File) {
   );
 }
 
+async function compressImageForUpload(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) {
+    return file;
+  }
+  const dataUrl = await readFileAsDataUrl(file);
+  const image = await loadImage(dataUrl);
+  const originalWidth = image.naturalWidth || image.width;
+  const originalHeight = image.naturalHeight || image.height;
+  let width = originalWidth;
+  let height = originalHeight;
+
+  const longestEdge = Math.max(width, height);
+  let scale = longestEdge > MAX_IMAGE_DIMENSION
+    ? MAX_IMAGE_DIMENSION / longestEdge
+    : 1;
+  if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+    const sizeBasedScale = Math.sqrt(MAX_IMAGE_UPLOAD_BYTES / file.size) * 0.95;
+    scale = Math.min(scale, sizeBasedScale);
+  }
+  if (scale < 1) {
+    width = Math.max(1, Math.round(width * scale));
+    height = Math.max(1, Math.round(height * scale));
+  }
+
+  let quality = 0.9;
+  let blob = await renderJpegBlob(image, width, height, quality);
+  while (blob.size > MAX_IMAGE_UPLOAD_BYTES && quality > MIN_JPEG_QUALITY) {
+    quality -= 0.08;
+    blob = await renderJpegBlob(image, width, height, quality);
+  }
+
+  while (
+    blob.size > MAX_IMAGE_UPLOAD_BYTES &&
+    width > MIN_IMAGE_DIMENSION &&
+    height > MIN_IMAGE_DIMENSION
+  ) {
+    width = Math.max(MIN_IMAGE_DIMENSION, Math.round(width * 0.85));
+    height = Math.max(MIN_IMAGE_DIMENSION, Math.round(height * 0.85));
+    quality = 0.82;
+    blob = await renderJpegBlob(image, width, height, quality);
+    while (blob.size > MAX_IMAGE_UPLOAD_BYTES && quality > MIN_JPEG_QUALITY) {
+      quality -= 0.08;
+      blob = await renderJpegBlob(image, width, height, quality);
+    }
+  }
+
+  if (blob.size > MAX_IMAGE_UPLOAD_BYTES) {
+    throw new Error(
+      `画像サイズが上限（${IMAGE_MAX_UPLOAD_MB}MB）を超えています。より小さい画像をアップロードしてください。`,
+    );
+  }
+
+  if (blob.size >= file.size && width === originalWidth && height === originalHeight) {
+    return file;
+  }
+
+  const baseName = file.name.replace(/\.[^.]+$/, "");
+  return new File([blob], `${baseName}.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
+}
+
+async function renderJpegBlob(
+  image: HTMLImageElement,
+  width: number,
+  height: number,
+  quality: number,
+): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas context unavailable");
+  }
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+  return await canvasToBlob(canvas, "image/jpeg", quality);
+}
+
 async function convertHeicToJpegIfNeeded(file: File): Promise<File> {
   const heicDetected = await detectHeicFile(file);
   if (!heicDetected) {
@@ -2573,7 +2678,15 @@ async function convertHeicBlobToJpeg(file: File): Promise<Blob> {
   }
   context.drawImage(image, 0, 0);
 
-  return await new Promise<Blob>((resolve, reject) => {
+  return await canvasToBlob(canvas, "image/jpeg", 0.92);
+}
+
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality: number,
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
         if (!blob) {
@@ -2582,8 +2695,8 @@ async function convertHeicBlobToJpeg(file: File): Promise<Blob> {
         }
         resolve(blob);
       },
-      "image/jpeg",
-      0.92,
+      type,
+      quality,
     );
   });
 }

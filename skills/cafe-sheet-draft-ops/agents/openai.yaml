@@ -1,0 +1,4 @@
+interface:
+  display_name: "カフェシート運用"
+  short_description: "シート補完と下書き同期、登録状況反映"
+  default_prompt: "$cafe-sheet-draft-ops を使って、カフェ行の補完・下書き投入・登録済み行のグレーアウトを実行して。"

@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "drafts:import": "node scripts/import-cafe-drafts.mjs",
+    "drafts:import:apply": "node scripts/import-cafe-drafts.mjs --apply",
+    "cafes:import": "node scripts/import-cafe-drafts.mjs",
+    "cafes:import:apply": "node scripts/import-cafe-drafts.mjs --apply"
   },
   "dependencies": {
     "@geolonia/normalize-japanese-addresses": "^3.1.3",

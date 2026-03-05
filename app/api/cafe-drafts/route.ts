@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     .from("cafe_drafts")
     .select("*")
     .order("updated_at", { ascending: false })
-    .limit(20);
+    .limit(100);
 
   if (scope !== "all") {
     query = cafeId

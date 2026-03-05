@@ -27,13 +27,6 @@ export const REQUIRED_TEXT_FIELDS: Array<
     "nearestStation",
   ];
 
-export const REQUIRED_IMAGE_CATEGORIES: ImageCategoryKey[] = [
-  "main",
-  "exterior",
-  "interior",
-  "power",
-];
-
 export const ALL_IMAGE_CATEGORIES: ImageCategoryKey[] = [
   "main",
   "exterior",
@@ -63,13 +56,6 @@ export function validateCafePayload(payload: Partial<CafeFormPayload>) {
     const value = payload[field];
     if (!value || (typeof value === "string" && value.trim() === "")) {
       errors.push(`${field}は必須です`);
-    }
-  });
-
-  REQUIRED_IMAGE_CATEGORIES.forEach((key) => {
-    const entry = payload.images?.[key];
-    if (!entry?.storagePath && !entry?.fileBase64) {
-      errors.push(`${key}画像は必須です`);
     }
   });
 
