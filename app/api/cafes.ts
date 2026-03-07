@@ -132,7 +132,7 @@ export function changePayloadToCafe(
     id: base?.id ?? `draft-${globalThis.crypto.randomUUID()}`,
     name: payload.name,
     facilityType: payload.facilityType,
-    area: payload.area,
+    area: inferAreaFromAddress(payload.addressLine1, payload.prefecture),
     prefecture: payload.prefecture,
     postalCode: payload.postalCode,
     addressLine1: payload.addressLine1,
@@ -158,17 +158,17 @@ export function changePayloadToCafe(
     outlet: payload.outlet,
     lighting: payload.lighting,
     meetingRoom: payload.meetingRoom,
-    allowsShortLeave: payload.allowsShortLeave,
+    allowsShortLeave: false,
     hasPrivateBooths: payload.hasPrivateBooths,
-    parking: payload.parking,
+    parking: false,
     smoking: payload.smoking,
-    coffeePrice: payload.coffeePrice,
-    bringOwnFood: payload.bringOwnFood,
+    coffeePrice: 0,
+    bringOwnFood: "not_allowed",
     alcohol: payload.alcohol,
     mainMenu: payload.mainMenu,
     services: normalizeServices(payload.services),
     paymentMethods: payload.paymentMethods,
-    customerTypes: payload.customerTypes,
+    customerTypes: [],
     recommendedWorkStyles: payload.recommendedWorkStyles,
     crowdMatrix: payload.crowdMatrix,
     ambienceCasual: payload.ambienceCasual,
@@ -244,7 +244,7 @@ export function buildCafeTableInsert(
   return {
     name: payload.name,
     facility_type: payload.facilityType,
-    area: payload.area,
+    area: inferAreaFromAddress(payload.addressLine1, payload.prefecture),
     prefecture: payload.prefecture,
     postal_code: payload.postalCode,
     address_line1: payload.addressLine1,
@@ -267,17 +267,17 @@ export function buildCafeTableInsert(
     outlet: payload.outlet,
     lighting: payload.lighting,
     meeting_room: payload.meetingRoom,
-    allow_short_leave: payload.allowsShortLeave,
+    allow_short_leave: false,
     private_booths: payload.hasPrivateBooths,
-    parking: payload.parking,
+    parking: false,
     smoking: payload.smoking,
-    coffee_price: payload.coffeePrice || null,
-    bring_own_food: normalizeBringOwnFood(payload.bringOwnFood),
+    coffee_price: null,
+    bring_own_food: normalizeBringOwnFood(null),
     alcohol: payload.alcohol,
     main_menu: payload.mainMenu || null,
     services: normalizeServices(payload.services),
     payment_methods: payload.paymentMethods,
-    customer_types: payload.customerTypes,
+    customer_types: [],
     recommended_work: payload.recommendedWorkStyles,
     crowd_levels: payload.crowdMatrix,
     ambience_casual: payload.ambienceCasual,
@@ -305,6 +305,17 @@ function normalizeBringOwnFood(
     return value;
   }
   return "not_allowed";
+}
+
+function inferAreaFromAddress(
+  addressLine1: string,
+  prefecture: string,
+): string {
+  const normalizedAddress = (addressLine1 || "").trim();
+  if (normalizedAddress.length > 0) {
+    return normalizedAddress;
+  }
+  return (prefecture || "").trim() || "未設定";
 }
 
 export function mapCafeRowToCafe(

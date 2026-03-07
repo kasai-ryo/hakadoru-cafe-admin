@@ -173,7 +173,6 @@ export function AdminCafeDetail({
           <InfoGrid
             items={[
               { label: "施設タイプ", value: facilityLabel(currentCafe.facilityType) },
-              { label: "エリア", value: currentCafe.area },
               { label: "ステータス", value: statusLabel(currentCafe.status) },
               { label: "利用制限", value: currentCafe.timeLimit || "ー" },
               { label: "Wi-Fi", value: currentCafe.wifi ? "あり" : "なし" },
@@ -197,7 +196,6 @@ export function AdminCafeDetail({
                 label: "座席数",
                 value: currentCafe.seats ? `${currentCafe.seats}席` : "未設定",
               },
-              { label: "コーヒー価格", value: priceLabel(currentCafe.coffeePrice) },
               { label: "アルコール提供", value: alcoholLabel(currentCafe.alcohol) },
               { label: "主要メニュー", value: currentCafe.mainMenu || "未設定" },
               { label: "電話番号", value: currentCafe.phone || "未設定" },
@@ -442,11 +440,6 @@ function formatList(list?: string[] | null) {
     return "未設定";
   }
   return list.join("、");
-}
-
-function priceLabel(price?: number | null) {
-  if (!price) return "未設定";
-  return `${price.toLocaleString()}円`;
 }
 
 function outletLabel(outlet: Cafe["outlet"]) {

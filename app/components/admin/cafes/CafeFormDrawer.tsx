@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import areas from "@/app/data/areas.json";
 import prefectures from "@/app/data/prefectures.json";
 import type {
   Cafe,
@@ -727,15 +726,6 @@ export function CafeFormDrawer({
     setActiveDraftSnapshotId(initialDraftSnapshotId ?? null);
     setIsPostalLookupLoading(false);
   }, [isOpen, editingCafe, initialDraftSnapshotId]);
-
-  useEffect(() => {
-    if (
-      formState.facilityType !== "coworking" &&
-      formState.allowsShortLeave
-    ) {
-      setFormState((prev) => ({ ...prev, allowsShortLeave: false }));
-    }
-  }, [formState.facilityType, formState.allowsShortLeave]);
 
   useEffect(() => {
     if (isOpen) {
@@ -1470,13 +1460,6 @@ function InfoStep({
             }
           />
           <SelectField
-            label="エリア"
-            options={areas}
-            value={formState.area}
-            placeholder="エリアを選択"
-            onChange={(value) => onChange("area", value)}
-          />
-          <SelectField
             label="都道府県"
             options={prefectures}
             value={formState.prefecture}
@@ -1503,13 +1486,6 @@ function InfoStep({
             }
           />
         </div>
-        {formState.facilityType === "coworking" && (
-          <ToggleField
-            label="途中離席（外出）可"
-            checked={formState.allowsShortLeave}
-            onChange={(checked) => onChange("allowsShortLeave", checked)}
-          />
-        )}
         <TextField
           label="公式サイト"
           value={formState.website}
@@ -1664,12 +1640,7 @@ function InfoStep({
             onChange={(checked) => onChange("meetingRoom", checked)}
           />
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          <ToggleField
-            label="駐車場あり"
-            checked={formState.parking}
-            onChange={(checked) => onChange("parking", checked)}
-          />
+        <div className="grid gap-4 md:grid-cols-2">
           <SelectField
             label="電源席の割合"
             required
@@ -1755,16 +1726,6 @@ function InfoStep({
       </Section>
 
       <Section title="料金・雰囲気">
-        <NumberField
-          label="コーヒー1杯の値段（円）"
-          value={formState.coffeePrice}
-          onChange={(value) =>
-            onChange(
-              "coffeePrice",
-              typeof value === "number" ? value : 0,
-            )
-          }
-        />
         <TextAreaField
           label="支払い方法"
           value={formState.paymentMethods.join(", ")}
