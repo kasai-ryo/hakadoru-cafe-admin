@@ -20,6 +20,31 @@ const REQUIRED_FIELDS = [
   "nearestStation",
 ];
 
+const ALLOWED_REGULAR_HOLIDAY_VALUES = new Set([
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+  "holiday",
+]);
+
+const ALLOWED_SERVICE_VALUES = new Set([
+  "pet_ok",
+  "terrace",
+  "takeout",
+  "window_seat",
+]);
+
+const ALLOWED_RECOMMENDED_WORK_VALUES = new Set([
+  "pc_work",
+  "reading",
+  "study",
+  "meeting",
+]);
+
 const CROWD_KEYS = [
   "weekday0608",
   "weekday0810",
@@ -303,6 +328,15 @@ function asNumber(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function asScore1to5(value, fallback = 3) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return fallback;
+  const n = Number(raw.replace(/[^\d.-]/g, ""));
+  if (!Number.isFinite(n)) return fallback;
+  const rounded = Math.round(n);
+  return Math.min(5, Math.max(1, rounded));
+}
+
 function normalizeTime(value) {
   if (!value) return "";
   const v = String(value)
@@ -366,6 +400,12 @@ function splitList(value) {
     .split(/[、,，/\n]/)
     .map((v) => v.trim())
     .filter(Boolean);
+}
+
+function parseStrictList(value, allowedValues) {
+  const values = splitList(value);
+  const invalid = values.filter((v) => !allowedValues.has(v));
+  return { values: values.filter((v) => allowedValues.has(v)), invalid };
 }
 
 function asBool(value, defaultValue = false) {
@@ -460,12 +500,6 @@ function fillCrowdByHours(crowdMatrix, keyPrefix, from, to) {
   });
 }
 
-function normalizeRegularHolidays(value) {
-  if (!value) return [];
-  if (/無休|なし|-/.test(value)) return [];
-  return splitList(value);
-}
-
 function createImage(path, caption) {
   if (!path) return null;
   return {
@@ -477,6 +511,7 @@ function createImage(path, caption) {
 
 function rowToPayload(row) {
   const p = emptyPayload();
+  const enumErrors = [];
   p.name = row["店舗名"] || "";
   p.facilityType = mapFacilityType(row["施設タイプ"]);
   p.area = row["エリア"] || "";
@@ -504,7 +539,18 @@ function rowToPayload(row) {
       p.hoursWeekendTo = p.hoursWeekendTo || inferred.weekendTo;
     }
   }
-  p.regularHolidays = normalizeRegularHolidays(row["定休日"]);
+  const regularHolidays = parseStrictList(
+    row["定休日"],
+    ALLOWED_REGULAR_HOLIDAY_VALUES,
+  );
+  p.regularHolidays = regularHolidays.values;
+  if (regularHolidays.invalid.length > 0) {
+    enumErrors.push(
+      `定休日: ${regularHolidays.invalid.join(", ")} (allowed: ${Array.from(
+        ALLOWED_REGULAR_HOLIDAY_VALUES,
+      ).join(", ")})`,
+    );
+  }
   p.seats = row["席数"] ? asNumber(row["席数"], 0) : "";
   p.wifi = asBool(row["Wi-Fi"], true);
   p.outlet = mapOutlet(row["電源席"]);
@@ -518,16 +564,35 @@ function rowToPayload(row) {
   p.bringOwnFood = mapBringOwnFood(row["飲食物持ち込み"]);
   p.alcohol = mapAlcohol(row["アルコール提供"]);
   p.mainMenu = row["メインメニュー"] || "";
-  p.services = splitList(row["サービス"]);
+  const services = parseStrictList(row["サービス"], ALLOWED_SERVICE_VALUES);
+  p.services = services.values;
+  if (services.invalid.length > 0) {
+    enumErrors.push(
+      `サービス: ${services.invalid.join(", ")} (allowed: ${Array.from(
+        ALLOWED_SERVICE_VALUES,
+      ).join(", ")})`,
+    );
+  }
   p.paymentMethods = splitList(row["支払い方法"]);
   p.customerTypes = splitList(row["客層"]);
-  p.recommendedWorkStyles = splitList(row["おすすめ作業スタイル"]);
+  const recommendedWorkStyles = parseStrictList(
+    row["おすすめ作業スタイル"],
+    ALLOWED_RECOMMENDED_WORK_VALUES,
+  );
+  p.recommendedWorkStyles = recommendedWorkStyles.values;
+  if (recommendedWorkStyles.invalid.length > 0) {
+    enumErrors.push(
+      `おすすめ作業スタイル: ${recommendedWorkStyles.invalid.join(
+        ", ",
+      )} (allowed: ${Array.from(ALLOWED_RECOMMENDED_WORK_VALUES).join(", ")})`,
+    );
+  }
 
   fillCrowdByHours(p.crowdMatrix, "weekday", p.hoursWeekdayFrom, p.hoursWeekdayTo);
   fillCrowdByHours(p.crowdMatrix, "weekend", p.hoursWeekendFrom, p.hoursWeekendTo);
 
-  p.ambienceCasual = asNumber(row["雰囲気_カジュアル"], 3);
-  p.ambienceModern = asNumber(row["雰囲気_モダン"], 3);
+  p.ambienceCasual = asScore1to5(row["雰囲気_カジュアル"], 3);
+  p.ambienceModern = asScore1to5(row["雰囲気_モダン"], 3);
   p.ambassadorComment = row["アンバサダーコメント"] || "";
   p.website = row["公式サイト"] || "";
   p.instagramUrl = row["Instagram URL"] || "";
@@ -542,7 +607,7 @@ function rowToPayload(row) {
     p.images[key] = createImage(row[pathHeader], row[captionHeader]);
   });
 
-  return p;
+  return { payload: p, enumErrors };
 }
 
 function validatePayload(payload) {
@@ -707,6 +772,7 @@ async function main() {
   let inserted = 0;
   let updatedCoords = 0;
   let skippedExistingCafe = 0;
+  let enumValidationErrorCount = 0;
 
   for (let i = startIndex; i <= endIndex; i += 1) {
     const row = toObject(headers, values[i] || []);
@@ -716,7 +782,16 @@ async function main() {
       if (args.apply) {
         const existingCafe = existingCafeByName.get(normalizedName);
         if (existingCafe && (existingCafe.latitude == null || existingCafe.longitude == null)) {
-          const payloadForGeocode = rowToPayload(row);
+          const { payload: payloadForGeocode, enumErrors } = rowToPayload(row);
+          if (enumErrors.length > 0) {
+            enumValidationErrorCount += 1;
+            failures.push({
+              row: i + 1,
+              cafe: row["店舗名"],
+              reason: enumErrors.join(" | "),
+            });
+            continue;
+          }
           const geocoded = await geocodeFromPayload(payloadForGeocode);
           if (geocoded) {
             const { error: updateError } = await supabase
@@ -741,7 +816,16 @@ async function main() {
       skippedExistingCafe += 1;
       continue;
     }
-    const payload = rowToPayload(row);
+    const { payload, enumErrors } = rowToPayload(row);
+    if (enumErrors.length > 0) {
+      enumValidationErrorCount += 1;
+      failures.push({
+        row: i + 1,
+        cafe: row["店舗名"],
+        reason: enumErrors.join(" | "),
+      });
+      continue;
+    }
     const missing = validatePayload(payload);
     if (missing.length > 0) {
       failures.push({ row: i + 1, cafe: row["店舗名"], reason: `missing required: ${missing.join(", ")}` });
@@ -786,6 +870,12 @@ async function main() {
     failures.forEach((f) => {
       console.log(`row ${f.row} (${f.cafe}): ${f.reason}`);
     });
+  }
+
+  if (enumValidationErrorCount > 0) {
+    throw new Error(
+      `Unsupported enum values found in ${enumValidationErrorCount} row(s). Update sheet values to allowed English keys.`,
+    );
   }
 }
 

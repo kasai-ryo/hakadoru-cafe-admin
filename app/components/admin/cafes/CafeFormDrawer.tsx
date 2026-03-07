@@ -20,33 +20,28 @@ const FACILITY_OPTIONS: { label: string; value: FacilityType }[] = [
   { label: "その他", value: "other" },
 ];
 
-const REGULAR_HOLIDAY_OPTIONS = [
-  "月曜日",
-  "火曜日",
-  "水曜日",
-  "木曜日",
-  "金曜日",
-  "土曜日",
-  "日曜日",
+const REGULAR_HOLIDAY_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "月曜日", value: "monday" },
+  { label: "火曜日", value: "tuesday" },
+  { label: "水曜日", value: "wednesday" },
+  { label: "木曜日", value: "thursday" },
+  { label: "金曜日", value: "friday" },
+  { label: "土曜日", value: "saturday" },
+  { label: "日曜日", value: "sunday" },
 ];
 
-const SERVICE_OPTIONS = [
-  "テラス席あり",
-  "24h営業",
-  "モニター貸出あり",
-  "窓際席あり",
-  "ペットOK",
-  "充電器貸出あり",
-  "ブランケット貸出あり",
+const SERVICE_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "ペットOK", value: "pet_ok" },
+  { label: "テラス席あり", value: "terrace" },
+  { label: "テイクアウト", value: "takeout" },
+  { label: "窓際席あり", value: "window_seat" },
 ];
 
-const PAYMENT_OPTIONS = ["現金", "クレカ", "QR決済", "交通系IC"];
-
-const RECOMMENDED_WORK_OPTIONS = [
-  "PC作業",
-  "読書",
-  "勉強",
-  "打合せ",
+const RECOMMENDED_WORK_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: "PC作業", value: "pc_work" },
+  { label: "読書", value: "reading" },
+  { label: "勉強", value: "study" },
+  { label: "打合せ", value: "meeting" },
 ];
 
 const SUPABASE_PUBLIC_URL =
@@ -73,6 +68,14 @@ function generateClientId() {
     return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
   }
   return `${Date.now().toString(16)}${Math.random().toString(16).slice(2)}`;
+}
+
+function parseMultiValueText(raw: string): string[] {
+  const values = raw
+    .split(/\r?\n|,/)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+  return Array.from(new Set(values));
 }
 
 const REQUIRED_FIELD_LABELS: Record<
@@ -868,7 +871,6 @@ export function CafeFormDrawer({
   const handleChipToggle = (
     key:
       | "services"
-      | "paymentMethods"
       | "customerTypes"
       | "recommendedWorkStyles",
     value: string,
@@ -1438,7 +1440,6 @@ function InfoStep({
   onChipToggle: (
     key:
       | "services"
-      | "paymentMethods"
       | "customerTypes"
       | "recommendedWorkStyles",
     value: string,
@@ -1648,17 +1649,17 @@ function InfoStep({
             allowEmpty
           />
           <ToggleField
-            label="Wi-Fi あり"
+            label="Wi-Fi"
             checked={formState.wifi}
             onChange={(checked) => onChange("wifi", checked)}
           />
           <ToggleField
-            label="個別ブースあり"
+            label="個別ブース"
             checked={formState.hasPrivateBooths}
             onChange={(checked) => onChange("hasPrivateBooths", checked)}
           />
           <ToggleField
-            label="会議室あり"
+            label="会議室"
             checked={formState.meetingRoom}
             onChange={(checked) => onChange("meetingRoom", checked)}
           />
@@ -1764,11 +1765,12 @@ function InfoStep({
             )
           }
         />
-        <ChipSelect
+        <TextAreaField
           label="支払い方法"
-          options={PAYMENT_OPTIONS}
-          values={formState.paymentMethods}
-          onToggle={(value) => onChipToggle("paymentMethods", value)}
+          value={formState.paymentMethods.join(", ")}
+          rows={2}
+          placeholder="例: 現金, クレジットカード, QR決済, 交通系IC"
+          onChange={(value) => onChange("paymentMethods", parseMultiValueText(value))}
         />
         <div className="grid gap-4 md:grid-cols-2">
           <SliderField
@@ -2220,7 +2222,7 @@ function ChipSelect({
 }: {
   label: string;
   values: string[];
-  options: string[];
+  options: Array<{ label: string; value: string }>;
   onToggle: (value: string) => void;
 }) {
   return (
@@ -2228,18 +2230,18 @@ function ChipSelect({
       <p className="text-sm font-medium text-gray-700">{label}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {options.map((option) => {
-          const isSelected = values.includes(option);
+          const isSelected = values.includes(option.value);
           return (
             <button
-              key={option}
+              key={option.value}
               type="button"
-              onClick={() => onToggle(option)}
+              onClick={() => onToggle(option.value)}
               className={`rounded-full border px-3 py-1 text-xs ${isSelected
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-gray-200 text-gray-600 hover:border-primary hover:text-primary"
                 }`}
             >
-              {option}
+              {option.label}
             </button>
           );
         })}
@@ -2260,14 +2262,14 @@ function HolidaySelect({
       <p className="text-sm font-medium text-gray-700">定休日</p>
       <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-700">
         {REGULAR_HOLIDAY_OPTIONS.map((day) => (
-          <label key={day} className="inline-flex items-center gap-1">
+          <label key={day.value} className="inline-flex items-center gap-1">
             <input
               type="checkbox"
-              checked={value.includes(day)}
-              onChange={() => onToggle(day)}
+              checked={value.includes(day.value)}
+              onChange={() => onToggle(day.value)}
               className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
             />
-            {day}
+            {day.label}
           </label>
         ))}
       </div>

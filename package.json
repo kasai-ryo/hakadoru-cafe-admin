@@ -10,7 +10,9 @@
     "drafts:import": "node scripts/import-cafe-drafts.mjs",
     "drafts:import:apply": "node scripts/import-cafe-drafts.mjs --apply",
     "cafes:import": "node scripts/import-cafe-drafts.mjs",
-    "cafes:import:apply": "node scripts/import-cafe-drafts.mjs --apply"
+    "cafes:import:apply": "node scripts/import-cafe-drafts.mjs --apply",
+    "cafes:mark-registered": "node scripts/mark-cafe-registration-status.mjs",
+    "cafes:mark-registered:apply": "node scripts/mark-cafe-registration-status.mjs --apply"
   },
   "dependencies": {
     "@geolonia/normalize-japanese-addresses": "^3.1.3",

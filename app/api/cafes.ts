@@ -6,6 +6,48 @@ import type {
   ImageCategoryKey,
 } from "@/app/types/cafe";
 
+const ALLOWED_SERVICE_VALUES = new Set([
+  "pet_ok",
+  "terrace",
+  "takeout",
+  "window_seat",
+]);
+
+function normalizeServices(values: string[] | null | undefined): string[] {
+  if (!Array.isArray(values)) return [];
+  const toServiceKey = (value: string) => {
+    const normalized = value.trim().replace(/\s+/g, "");
+    switch (normalized) {
+      case "ペットOK":
+      case "pet_ok":
+        return "pet_ok";
+      case "テラス席あり":
+      case "テラス席":
+      case "terrace":
+        return "terrace";
+      case "テイクアウト":
+      case "takeout":
+        return "takeout";
+      case "窓際席あり":
+      case "窓際席":
+      case "window_seat":
+        return "window_seat";
+      default:
+        return null;
+    }
+  };
+  return Array.from(
+    new Set(
+      values
+        .map((value) => (typeof value === "string" ? toServiceKey(value) : null))
+        .filter(
+          (value): value is string =>
+            typeof value === "string" && ALLOWED_SERVICE_VALUES.has(value),
+        ),
+    ),
+  );
+}
+
 type CafeImageRow = {
   id?: string;
   cafe_id: string;
@@ -124,7 +166,7 @@ export function changePayloadToCafe(
     bringOwnFood: payload.bringOwnFood,
     alcohol: payload.alcohol,
     mainMenu: payload.mainMenu,
-    services: payload.services,
+    services: normalizeServices(payload.services),
     paymentMethods: payload.paymentMethods,
     customerTypes: payload.customerTypes,
     recommendedWorkStyles: payload.recommendedWorkStyles,
@@ -233,7 +275,7 @@ export function buildCafeTableInsert(
     bring_own_food: normalizeBringOwnFood(payload.bringOwnFood),
     alcohol: payload.alcohol,
     main_menu: payload.mainMenu || null,
-    services: payload.services,
+    services: normalizeServices(payload.services),
     payment_methods: payload.paymentMethods,
     customer_types: payload.customerTypes,
     recommended_work: payload.recommendedWorkStyles,
@@ -307,7 +349,7 @@ export function mapCafeRowToCafe(
     bringOwnFood: row.bring_own_food,
     alcohol: row.alcohol,
     mainMenu: row.main_menu ?? "",
-    services: row.services ?? [],
+    services: normalizeServices(row.services),
     paymentMethods: row.payment_methods ?? [],
     customerTypes: row.customer_types ?? [],
     recommendedWorkStyles: row.recommended_work ?? [],

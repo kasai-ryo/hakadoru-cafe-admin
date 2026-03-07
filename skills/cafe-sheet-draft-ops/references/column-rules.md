@@ -36,3 +36,10 @@
 
 - `public.cafes` に登録済みの行はグレーアウトする。
 - 必須列の強調色は維持する。
+
+## 列値ルール（英字キー）
+
+- `定休日` は英字キーで入力する。許容値: `monday,tuesday,wednesday,thursday,friday,saturday,sunday,holiday`
+- `サービス` は英字キーで入力する。許容値: `pet_ok,terrace,takeout,window_seat`
+- `おすすめ作業スタイル` は英字キーで入力する。許容値: `pc_work,reading,study,meeting`
+- 上記3列で許容値以外が入っている場合、`scripts/import-cafe-drafts.mjs` はエラー終了する。
