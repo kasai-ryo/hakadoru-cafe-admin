@@ -249,7 +249,9 @@ export function AdminCafeDetail({
               },
               {
                 label: "定休日",
-                value: (currentCafe.regularHolidays || []).join("、") || "なし",
+                value:
+                  formatMappedList(currentCafe.regularHolidays, REGULAR_HOLIDAY_LABELS) ||
+                  "なし",
               },
               { label: "補足", value: currentCafe.hoursNote || "ー" },
             ]}
@@ -259,14 +261,20 @@ export function AdminCafeDetail({
         <InfoSection title="サービス">
           <InfoGrid
             items={[
-              { label: "サービス", value: formatList(currentCafe.services) },
+              {
+                label: "サービス",
+                value: formatMappedList(currentCafe.services, SERVICE_LABELS),
+              },
               {
                 label: "支払い方法",
                 value: formatList(currentCafe.paymentMethods),
               },
               {
                 label: "おすすめ用途",
-                value: formatList(currentCafe.recommendedWorkStyles),
+                value: formatMappedList(
+                  currentCafe.recommendedWorkStyles,
+                  RECOMMENDED_WORK_LABELS,
+                ),
               },
             ]}
           />
@@ -440,6 +448,41 @@ function formatList(list?: string[] | null) {
     return "未設定";
   }
   return list.join("、");
+}
+
+const REGULAR_HOLIDAY_LABELS: Record<string, string> = {
+  monday: "月曜日",
+  tuesday: "火曜日",
+  wednesday: "水曜日",
+  thursday: "木曜日",
+  friday: "金曜日",
+  saturday: "土曜日",
+  sunday: "日曜日",
+};
+
+const SERVICE_LABELS: Record<string, string> = {
+  pet_ok: "ペットOK",
+  terrace: "テラス席あり",
+  takeout: "テイクアウト",
+  window_seat: "窓際席あり",
+};
+
+const RECOMMENDED_WORK_LABELS: Record<string, string> = {
+  pc_work: "PC作業",
+  reading: "読書",
+  study: "勉強",
+  meeting: "打合せ",
+};
+
+function formatMappedList(
+  list: string[] | null | undefined,
+  labels: Record<string, string>,
+) {
+  if (!list || list.length === 0) {
+    return "未設定";
+  }
+
+  return list.map((item) => labels[item] ?? item).join("、");
 }
 
 function outletLabel(outlet: Cafe["outlet"]) {

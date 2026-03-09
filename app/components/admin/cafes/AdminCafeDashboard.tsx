@@ -59,7 +59,11 @@ export function AdminCafeDashboard({
   }, [cafeList, filters]);
 
   const areaOptions = useMemo(() => {
-    const unique = new Set(cafeList.map((cafe) => cafe.area));
+    const unique = new Set(
+      cafeList
+        .map((cafe) => (typeof cafe.area === "string" ? cafe.area.trim() : ""))
+        .filter((area) => area.length > 0),
+    );
     return Array.from(unique);
   }, [cafeList]);
 
