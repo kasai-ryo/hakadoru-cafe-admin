@@ -10,7 +10,7 @@ type AdminRequestItem = {
   id: string;
   kind: RequestKind;
   accountId: string;
-  requestType: string;
+  accountName: string | null;
   status: RequestStatus;
   adminComment: string | null;
   createdAt: string;
@@ -27,14 +27,20 @@ type RequestEditState = {
   adminComment: string;
 };
 
-const STATUS_OPTIONS: { value: RequestStatus; label: string }[] = [
-  { value: "pending", label: "審査中" },
+const STATUS_LABELS: Record<RequestStatus, string> = {
+  pending: "審査中",
+  approved: "承認",
+  rejected: "非承認",
+  withdrawn: "取り下げ",
+};
+
+const STATUS_EDIT_OPTIONS: { value: RequestStatus; label: string }[] = [
   { value: "approved", label: "承認" },
-  { value: "rejected", label: "却下" },
-  { value: "withdrawn", label: "取り下げ" },
+  { value: "rejected", label: "非承認" },
 ];
 
 const FIELD_LABELS: Record<string, string> = {
+  // 旧形式 (snake_case)
   name: "カフェ名",
   address: "住所",
   hours_weekday: "営業時間（平日）",
@@ -59,6 +65,43 @@ const FIELD_LABELS: Record<string, string> = {
   features: "特徴",
   content: "修正内容",
   facility_type: "施設タイプ",
+  // 新形式 (camelCase)
+  facilityType: "施設タイプ",
+  prefecture: "都道府県",
+  postalCode: "郵便番号",
+  addressLine1: "住所1",
+  addressLine2: "住所2（建物名等）",
+  addressLine3: "住所3",
+  access: "アクセス",
+  nearestStation: "最寄り駅",
+  hoursWeekdayFrom: "平日営業開始",
+  hoursWeekdayTo: "平日営業終了",
+  hoursWeekendFrom: "土日祝営業開始",
+  hoursWeekendTo: "土日祝営業終了",
+  hoursNote: "営業時間備考",
+  regularHolidays: "定休日",
+  timeLimit: "利用時間制限",
+  meetingRoom: "会議室",
+  allowsShortLeave: "一時退出",
+  hasPrivateBooths: "個室ブース",
+  parking: "駐車場",
+  smokingNote: "喫煙備考",
+  coffeePrice: "コーヒー1杯の値段",
+  bringOwnFood: "飲食物持込可否",
+  alcohol: "アルコール",
+  mainMenu: "主なメニュー",
+  paymentMethods: "支払い方法",
+  customerTypes: "客層",
+  recommendedWorkStyles: "おすすめの作業",
+  ambienceCasual: "カジュアル度",
+  ambienceModern: "モダン度",
+  ambassadorComment: "アンバサダーコメント",
+  equipmentNote: "設備備考",
+  crowdMatrix: "混雑状況",
+  instagramUrl: "Instagram",
+  tiktokUrl: "TikTok",
+  latitude: "緯度",
+  longitude: "経度",
 };
 
 const WIFI_OPTIONS = [
@@ -85,6 +128,8 @@ const LIGHTING_OPTIONS = [
 const SMOKING_OPTIONS = [
   { value: "", label: "未設定" },
   { value: "no_smoking", label: "禁煙" },
+  { value: "separated", label: "分煙" },
+  { value: "e_cigarette", label: "加熱式のみ" },
   { value: "allowed", label: "喫煙可能" },
 ];
 
@@ -116,12 +161,92 @@ const PAYMENT_METHOD_OPTIONS = [
   { value: "ic_card", label: "交通系IC" },
 ];
 
-const CAFE_REQUEST_FIELD_ORDER = [
-  "name", "address", "hours_weekday", "hours_weekend", "area",
-  "nearest_station", "phone", "website", "seats", "wifi", "outlet",
-  "lighting", "meeting_room", "smoking", "regular_holidays", "time_limit",
-  "coffee_price", "bring_own_food", "services", "payment_methods", "notes", "features",
+const ALCOHOL_OPTIONS = [
+  { value: "", label: "未設定" },
+  { value: "available", label: "あり" },
+  { value: "night_only", label: "夜のみ" },
+  { value: "unavailable", label: "なし" },
 ];
+
+const REGULAR_HOLIDAY_OPTIONS = [
+  { value: "月曜日", label: "月曜日" },
+  { value: "火曜日", label: "火曜日" },
+  { value: "水曜日", label: "水曜日" },
+  { value: "木曜日", label: "木曜日" },
+  { value: "金曜日", label: "金曜日" },
+  { value: "土曜日", label: "土曜日" },
+  { value: "日曜日", label: "日曜日" },
+  { value: "祝日", label: "祝日" },
+  { value: "不定休", label: "不定休" },
+  { value: "なし", label: "なし" },
+];
+
+const CUSTOMER_TYPE_OPTIONS = [
+  { value: "ビジネス", label: "ビジネス" },
+  { value: "学生", label: "学生" },
+  { value: "フリーランス", label: "フリーランス" },
+  { value: "地元", label: "地元" },
+];
+
+const RECOMMENDED_WORK_OPTIONS = [
+  { value: "PC作業", label: "PC作業" },
+  { value: "オンライン会議", label: "オンライン会議" },
+  { value: "読書", label: "読書" },
+  { value: "集中作業", label: "集中作業" },
+  { value: "深夜作業", label: "深夜作業" },
+  { value: "ブレスト", label: "ブレスト" },
+];
+
+const CAFE_REQUEST_FIELD_SECTIONS: { section: string; fields: string[] }[] = [
+  {
+    section: "基本情報",
+    fields: [
+      "name", "facilityType", "facility_type", "prefecture", "postalCode",
+      "address", "addressLine1", "addressLine2", "addressLine3",
+      "area", "access", "nearestStation", "nearest_station",
+      "phone", "website", "instagramUrl", "tiktokUrl",
+    ],
+  },
+  {
+    section: "営業情報",
+    fields: [
+      "hours_weekday", "hours_weekend",
+      "hoursWeekdayFrom", "hoursWeekdayTo", "hoursWeekendFrom", "hoursWeekendTo",
+      "hoursNote", "regularHolidays", "regular_holidays", "timeLimit", "time_limit",
+    ],
+  },
+  {
+    section: "設備・環境",
+    fields: [
+      "seats", "wifi", "outlet", "lighting",
+      "meetingRoom", "meeting_room", "allowsShortLeave", "hasPrivateBooths",
+      "parking", "smoking", "smokingNote",
+    ],
+  },
+  {
+    section: "サービス・メニュー",
+    fields: [
+      "coffeePrice", "coffee_price", "bringOwnFood", "bring_own_food",
+      "alcohol", "mainMenu", "services",
+      "paymentMethods", "payment_methods",
+      "customerTypes", "recommendedWorkStyles", "equipmentNote",
+    ],
+  },
+  {
+    section: "雰囲気・混雑",
+    fields: ["ambienceCasual", "ambienceModern", "ambassadorComment", "crowdMatrix"],
+  },
+  {
+    section: "位置情報",
+    fields: ["latitude", "longitude"],
+  },
+  {
+    section: "その他",
+    fields: ["notes", "features"],
+  },
+];
+
+const CAFE_REQUEST_FIELD_ORDER = CAFE_REQUEST_FIELD_SECTIONS.flatMap((s) => s.fields);
 
 function formatDateTime(isoString: string | null) {
   if (!isoString) return "-";
@@ -142,22 +267,47 @@ function itemKey(item: Pick<AdminRequestItem, "kind" | "id">) {
 function formatEnumValue(key: string, value: unknown): string {
   if (value === null || typeof value === "undefined" || value === "") return "-";
   const str = String(value);
+
+  // select 系
   if (key === "outlet") return OUTLET_OPTIONS.find((o) => o.value === str)?.label || str;
   if (key === "lighting") return LIGHTING_OPTIONS.find((o) => o.value === str)?.label || str;
   if (key === "smoking") return SMOKING_OPTIONS.find((o) => o.value === str)?.label || str;
-  if (key === "bring_own_food") return BRING_OWN_FOOD_OPTIONS.find((o) => o.value === str)?.label || str;
-  if (key === "facility_type") return FACILITY_TYPE_OPTIONS.find((o) => o.value === str)?.label || str;
-  if (key === "wifi" || key === "meeting_room") return value === true || value === "true" ? "あり" : "なし";
+  if (key === "bring_own_food" || key === "bringOwnFood") return BRING_OWN_FOOD_OPTIONS.find((o) => o.value === str)?.label || str;
+  if (key === "facility_type" || key === "facilityType") return FACILITY_TYPE_OPTIONS.find((o) => o.value === str)?.label || str;
+  if (key === "alcohol") return ALCOHOL_OPTIONS.find((o) => o.value === str)?.label || str;
+
+  // boolean 系
+  if (key === "wifi" || key === "meeting_room" || key === "meetingRoom" || key === "allowsShortLeave" || key === "hasPrivateBooths" || key === "parking") {
+    return value === true || value === "true" ? "あり" : "なし";
+  }
   if (typeof value === "boolean") return value ? "あり" : "なし";
+
+  // 数値スコア
+  if (key === "ambienceCasual" || key === "ambienceModern") return `${value} / 5`;
+
   if (typeof value === "number") return String(value);
+
+  // 配列系
   if (Array.isArray(value)) {
     if (value.length === 0) return "-";
     if (key === "services") {
       const map = Object.fromEntries(SERVICE_OPTIONS.map((o) => [o.value, o.label]));
       return value.map((v) => map[v] || v).join(", ");
     }
-    if (key === "payment_methods") {
+    if (key === "payment_methods" || key === "paymentMethods") {
       const map = Object.fromEntries(PAYMENT_METHOD_OPTIONS.map((o) => [o.value, o.label]));
+      return value.map((v) => map[v] || v).join(", ");
+    }
+    if (key === "customerTypes") {
+      const map = Object.fromEntries(CUSTOMER_TYPE_OPTIONS.map((o) => [o.value, o.label]));
+      return value.map((v) => map[v] || v).join(", ");
+    }
+    if (key === "recommendedWorkStyles") {
+      const map = Object.fromEntries(RECOMMENDED_WORK_OPTIONS.map((o) => [o.value, o.label]));
+      return value.map((v) => map[v] || v).join(", ");
+    }
+    if (key === "regularHolidays" || key === "regular_holidays") {
+      const map = Object.fromEntries(REGULAR_HOLIDAY_OPTIONS.map((o) => [o.value, o.label]));
       return value.map((v) => map[v] || v).join(", ");
     }
     return value.join(", ");
@@ -173,23 +323,45 @@ function renderCafeRequestPreview(payload: unknown) {
     return <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">{String(payload ?? "-")}</p>;
   }
   const data = payload as Record<string, unknown>;
-  const orderedKeys = CAFE_REQUEST_FIELD_ORDER.filter((k) => k in data);
+  const allOrderedKeys = CAFE_REQUEST_FIELD_ORDER.filter((k) => k in data);
   const extraKeys = Object.keys(data).filter((k) => !CAFE_REQUEST_FIELD_ORDER.includes(k));
-  const allKeys = [...orderedKeys, ...extraKeys];
-  if (allKeys.length === 0) {
+
+  if (allOrderedKeys.length === 0 && extraKeys.length === 0) {
     return <p className="rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">項目なし</p>;
   }
+
+  const renderFieldItem = (key: string) => (
+    <div key={key} className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+      <dt className="text-xs font-semibold text-gray-500">{FIELD_LABELS[key] || key}</dt>
+      <dd className="mt-1 whitespace-pre-wrap break-all text-sm text-gray-800">
+        {formatEnumValue(key, data[key])}
+      </dd>
+    </div>
+  );
+
   return (
-    <dl className="grid gap-2 sm:grid-cols-2">
-      {allKeys.map((key) => (
-        <div key={key} className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
-          <dt className="text-xs font-semibold text-gray-500">{FIELD_LABELS[key] || key}</dt>
-          <dd className="mt-1 whitespace-pre-wrap break-all text-sm text-gray-800">
-            {formatEnumValue(key, data[key])}
-          </dd>
+    <div className="space-y-4">
+      {CAFE_REQUEST_FIELD_SECTIONS.map((sec) => {
+        const sectionKeys = sec.fields.filter((k) => k in data);
+        if (sectionKeys.length === 0) return null;
+        return (
+          <div key={sec.section}>
+            <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">{sec.section}</h4>
+            <dl className="grid gap-2 sm:grid-cols-2">
+              {sectionKeys.map(renderFieldItem)}
+            </dl>
+          </div>
+        );
+      })}
+      {extraKeys.length > 0 && (
+        <div>
+          <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-gray-400">未分類</h4>
+          <dl className="grid gap-2 sm:grid-cols-2">
+            {extraKeys.map(renderFieldItem)}
+          </dl>
         </div>
-      ))}
-    </dl>
+      )}
+    </div>
   );
 }
 
@@ -251,6 +423,9 @@ function ApprovalEditForm({
     ? (payload as Record<string, unknown>)
     : {};
 
+  const isNewFormat = "addressLine1" in data || "hoursWeekdayFrom" in data ||
+    "addressLine1" in approvalData || "hoursWeekdayFrom" in approvalData;
+
   const getValue = (key: string) => {
     if (key in approvalData) return approvalData[key];
     if (key in data) return data[key];
@@ -292,8 +467,11 @@ function ApprovalEditForm({
       value={String(getValue(key) ?? "")}
       onChange={(e) => {
         const v = e.target.value;
-        if (key === "wifi" || key === "meeting_room") handleChange(key, v === "true");
-        else handleChange(key, v || null);
+        if (key === "wifi" || key === "meeting_room" || key === "meetingRoom" || key === "allowsShortLeave" || key === "hasPrivateBooths" || key === "parking") {
+          handleChange(key, v === "true");
+        } else {
+          handleChange(key, v || null);
+        }
       }}
       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
     >
@@ -322,35 +500,149 @@ function ApprovalEditForm({
     );
   };
 
+  const textareaInput = (key: string, placeholder?: string, rows = 3) => (
+    <textarea
+      value={String(getValue(key) ?? "")}
+      onChange={(e) => handleChange(key, e.target.value)}
+      placeholder={placeholder}
+      rows={rows}
+      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+    />
+  );
+
+  const toggleInput = (key: string) => (
+    <label className="flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        checked={getValue(key) === true || getValue(key) === "true"}
+        onChange={(e) => handleChange(key, e.target.checked)}
+        className="rounded border-gray-300"
+      />
+      {FIELD_LABELS[key] || key}
+    </label>
+  );
+
+  const BOOL_YES_NO_OPTIONS = [
+    { value: "true", label: "あり" },
+    { value: "false", label: "なし" },
+  ];
+
+  const sectionHeader = (title: string) => (
+    <div className="col-span-full border-b border-blue-200 pb-1 pt-2">
+      <p className="text-xs font-bold uppercase tracking-wider text-blue-600">{title}</p>
+    </div>
+  );
+
   return (
     <div className="mt-3 space-y-3 rounded-lg border border-blue-200 bg-blue-50/50 p-4">
       <p className="text-sm font-semibold text-blue-800">承認時のカフェ情報（編集可能）</p>
+
       <div className="grid gap-3 sm:grid-cols-2">
+        {sectionHeader("基本情報")}
         <label className="flex flex-col gap-1 text-sm text-gray-700">カフェ名 *{textInput("name", "カフェ名")}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">施設タイプ{selectInput("facility_type", FACILITY_TYPE_OPTIONS)}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">住所 *{textInput("address", "東京都渋谷区...")}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">営業時間（平日）{textInput("hours_weekday", "9:00-18:00")}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">営業時間（土日祝）{textInput("hours_weekend", "10:00-17:00")}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">施設タイプ
+          {selectInput(isNewFormat ? "facilityType" : "facility_type", FACILITY_TYPE_OPTIONS)}
+        </label>
+
+        {isNewFormat ? (
+          <>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">都道府県{textInput("prefecture", "東京都")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">郵便番号{textInput("postalCode", "100-0001")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">住所1 *{textInput("addressLine1", "渋谷区渋谷2-10-12")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">住所2（建物名等）{textInput("addressLine2", "クロスタワー12F")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">住所3{textInput("addressLine3")}</label>
+          </>
+        ) : (
+          <label className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">住所 *{textInput("address", "東京都渋谷区...")}</label>
+        )}
+
         <label className="flex flex-col gap-1 text-sm text-gray-700">エリア{textInput("area", "渋谷")}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">最寄り駅{textInput("nearest_station", "渋谷駅")}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">アクセス{textInput(isNewFormat ? "access" : "access", "渋谷駅東口徒歩6分")}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">最寄り駅{textInput(isNewFormat ? "nearestStation" : "nearest_station", "渋谷駅")}</label>
         <label className="flex flex-col gap-1 text-sm text-gray-700">電話番号{textInput("phone", "03-1234-5678")}</label>
         <label className="flex flex-col gap-1 text-sm text-gray-700">ウェブサイト{textInput("website", "https://example.com")}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">Instagram{textInput("instagramUrl", "https://instagram.com/...")}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">TikTok{textInput("tiktokUrl", "https://tiktok.com/...")}</label>
+
+        {sectionHeader("営業情報")}
+        {isNewFormat ? (
+          <>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">平日営業開始{textInput("hoursWeekdayFrom", "09:00")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">平日営業終了{textInput("hoursWeekdayTo", "21:00")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">土日祝営業開始{textInput("hoursWeekendFrom", "10:00")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">土日祝営業終了{textInput("hoursWeekendTo", "20:00")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">営業時間備考{textInput("hoursNote", "祝日は短縮営業")}</label>
+          </>
+        ) : (
+          <>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">営業時間（平日）{textInput("hours_weekday", "9:00-18:00")}</label>
+            <label className="flex flex-col gap-1 text-sm text-gray-700">営業時間（土日祝）{textInput("hours_weekend", "10:00-17:00")}</label>
+          </>
+        )}
+
+        <div className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">
+          定休日
+          {multiSelectInput(isNewFormat ? "regularHolidays" : "regular_holidays", REGULAR_HOLIDAY_OPTIONS)}
+        </div>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">利用時間制限{textInput(isNewFormat ? "timeLimit" : "time_limit", "2時間")}</label>
+
+        {sectionHeader("設備・環境")}
         <label className="flex flex-col gap-1 text-sm text-gray-700">座席数{numberInput("seats")}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">コーヒー1杯の値段（円）{numberInput("coffee_price")}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">フリーWi-Fi{selectInput("wifi", WIFI_OPTIONS)}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">フリーWi-Fi{selectInput("wifi", BOOL_YES_NO_OPTIONS)}</label>
         <label className="flex flex-col gap-1 text-sm text-gray-700">電源{selectInput("outlet", OUTLET_OPTIONS)}</label>
         <label className="flex flex-col gap-1 text-sm text-gray-700">照明{selectInput("lighting", LIGHTING_OPTIONS)}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">会議室{selectInput("meeting_room", WIFI_OPTIONS)}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">会議室
+          {selectInput(isNewFormat ? "meetingRoom" : "meeting_room", BOOL_YES_NO_OPTIONS)}
+        </label>
+        <div className="flex flex-col gap-1 text-sm text-gray-700">
+          <span className="mb-1">その他設備</span>
+          <div className="space-y-1">
+            {toggleInput(isNewFormat ? "allowsShortLeave" : "allowsShortLeave")}
+            {toggleInput(isNewFormat ? "hasPrivateBooths" : "hasPrivateBooths")}
+            {toggleInput("parking")}
+          </div>
+        </div>
         <label className="flex flex-col gap-1 text-sm text-gray-700">禁煙・喫煙{selectInput("smoking", SMOKING_OPTIONS)}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">飲食物持込可否{selectInput("bring_own_food", BRING_OWN_FOOD_OPTIONS)}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">定休日{textInput("regular_holidays", "日曜日")}</label>
-        <label className="flex flex-col gap-1 text-sm text-gray-700">利用時間制限{textInput("time_limit", "2時間")}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">喫煙備考{textInput("smokingNote")}</label>
+
+        {sectionHeader("サービス・メニュー")}
+        <label className="flex flex-col gap-1 text-sm text-gray-700">コーヒー1杯の値段（円）
+          {numberInput(isNewFormat ? "coffeePrice" : "coffee_price")}
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">飲食物持込可否
+          {selectInput(isNewFormat ? "bringOwnFood" : "bring_own_food", BRING_OWN_FOOD_OPTIONS)}
+        </label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">アルコール{selectInput("alcohol", ALCOHOL_OPTIONS)}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">主なメニュー{textInput("mainMenu", "ブレンドコーヒー、カフェラテ")}</label>
         <div className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">サービス{multiSelectInput("services", SERVICE_OPTIONS)}</div>
-        <div className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">支払い方法{multiSelectInput("payment_methods", PAYMENT_METHOD_OPTIONS)}</div>
+        <div className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">
+          支払い方法
+          {multiSelectInput(isNewFormat ? "paymentMethods" : "payment_methods", PAYMENT_METHOD_OPTIONS)}
+        </div>
+        <div className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">客層{multiSelectInput("customerTypes", CUSTOMER_TYPE_OPTIONS)}</div>
+        <div className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">おすすめの作業{multiSelectInput("recommendedWorkStyles", RECOMMENDED_WORK_OPTIONS)}</div>
+        <label className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">設備備考{textInput("equipmentNote")}</label>
+
+        {sectionHeader("雰囲気")}
+        <label className="flex flex-col gap-1 text-sm text-gray-700">カジュアル度（1-5）{numberInput("ambienceCasual")}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700">モダン度（1-5）{numberInput("ambienceModern")}</label>
+        <label className="flex flex-col gap-1 text-sm text-gray-700 sm:col-span-2">
+          アンバサダーコメント
+          {textareaInput("ambassadorComment", "カフェの雰囲気やおすすめポイント", 3)}
+        </label>
       </div>
     </div>
   );
 }
+
+type StatusFilterValue = RequestStatus | "all";
+
+const STATUS_FILTER_OPTIONS: { value: StatusFilterValue; label: string }[] = [
+  { value: "all", label: "すべて" },
+  { value: "pending", label: "審査中" },
+  { value: "approved", label: "承認" },
+  { value: "rejected", label: "非承認" },
+];
 
 export default function AdminRequestsPage() {
   const [items, setItems] = useState<AdminRequestItem[]>([]);
@@ -359,6 +651,7 @@ export default function AdminRequestsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilterValue>("pending");
 
   const loadItems = async () => {
     setIsLoading(true);
@@ -377,8 +670,8 @@ export default function AdminRequestsPage() {
       );
       const nextApprovalForms: Record<string, Record<string, unknown>> = {};
       for (const item of nextItems) {
-        if (item.kind === "cafe_request" && item.payload && typeof item.payload === "object") {
-          nextApprovalForms[itemKey(item)] = { ...(item.payload as Record<string, unknown>) };
+        if (item.kind === "cafe_request") {
+          nextApprovalForms[itemKey(item)] = {};
         }
       }
       setApprovalForms(nextApprovalForms);
@@ -392,8 +685,14 @@ export default function AdminRequestsPage() {
 
   useEffect(() => { void loadItems(); }, []);
 
-  const cafeRequests = useMemo(() => items.filter((item) => item.kind === "cafe_request"), [items]);
-  const cafeEditRequests = useMemo(() => items.filter((item) => item.kind === "cafe_edit_request"), [items]);
+  const cafeRequests = useMemo(
+    () => items.filter((item) => item.kind === "cafe_request" && (statusFilter === "all" || item.status === statusFilter)),
+    [items, statusFilter],
+  );
+  const cafeEditRequests = useMemo(
+    () => items.filter((item) => item.kind === "cafe_edit_request" && (statusFilter === "all" || item.status === statusFilter)),
+    [items, statusFilter],
+  );
 
   const handleEditChange = (
     item: Pick<AdminRequestItem, "kind" | "id">,
@@ -405,8 +704,7 @@ export default function AdminRequestsPage() {
     if (patch.status === "approved") {
       const fullItem = items.find((i) => i.id === item.id && i.kind === item.kind);
       if (fullItem?.kind === "cafe_request" && !approvalForms[key]) {
-        const payload = fullItem.payload as Record<string, unknown> | null;
-        setApprovalForms((prev) => ({ ...prev, [key]: { ...(payload || {}) } }));
+        setApprovalForms((prev) => ({ ...prev, [key]: {} }));
       }
     }
   };
@@ -498,32 +796,43 @@ export default function AdminRequestsPage() {
                     <p className="text-sm font-semibold text-gray-900">
                       {item.kind === "cafe_request" ? "カフェ掲載リクエスト" : "カフェ情報修正リクエスト"}
                     </p>
+                    {item.cafeId && (
+                      <p className="mt-1 flex items-center gap-1.5 text-sm">
+                        <span className="font-medium text-gray-600">対象:</span>
+                        <Link
+                          href={`/admin/cafes/${item.cafeId}`}
+                          className="font-bold text-primary hover:underline"
+                        >
+                          {item.cafeName ?? "不明"}
+                        </Link>
+                      </p>
+                    )}
                     <p className="mt-1 text-xs text-gray-500">ID: {item.id}</p>
                   </div>
                   <div className="rounded-md bg-gray-100 px-3 py-1 text-xs text-gray-700">
-                    現在: {STATUS_OPTIONS.find((s) => s.value === item.status)?.label}
+                    現在: {STATUS_LABELS[item.status]}
                   </div>
                 </div>
 
                 <div className="mt-3 grid gap-2 text-sm text-gray-700 sm:grid-cols-2">
-                  <p>ユーザーID: {item.accountId}</p>
-                  <p>種別: {item.requestType}</p>
+                  <p>ユーザー: {item.accountName ? `${item.accountName}（${item.accountId}）` : item.accountId}</p>
                   <p>作成日時: {formatDateTime(item.createdAt)}</p>
                   <p>更新日時: {formatDateTime(item.updatedAt)}</p>
                   <p>レビュー日時: {formatDateTime(item.reviewedAt)}</p>
-                  {item.cafeId && <p>対象カフェ: {item.cafeName ?? "不明"} ({item.cafeId})</p>}
                 </div>
 
                 {item.reason && (
                   <p className="mt-3 rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-700">修正理由: {item.reason}</p>
                 )}
 
-                <div className="mt-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">リクエスト内容</p>
-                  <div className="mt-1">
-                    {item.kind === "cafe_request" ? renderCafeRequestPreview(item.payload) : renderEditRequestPreview(item.payload)}
+                {item.kind !== "cafe_request" && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">リクエスト内容</p>
+                    <div className="mt-1">
+                      {renderEditRequestPreview(item.payload)}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {showApprovalForm && (
                   <ApprovalEditForm
@@ -542,7 +851,7 @@ export default function AdminRequestsPage() {
                       disabled={isSaving}
                       className="rounded-lg border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     >
-                      {STATUS_OPTIONS.map((s) => (
+                      {STATUS_EDIT_OPTIONS.map((s) => (
                         <option key={s.value} value={s.value}>{s.label}</option>
                       ))}
                     </select>
@@ -566,7 +875,7 @@ export default function AdminRequestsPage() {
                     disabled={isSaving}
                     className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSaving ? "更新中..." : edit.status === "approved" && item.status !== "approved" ? "承認して公開" : "更新する"}
+                    {isSaving ? "更新中..." : edit.status === "approved" && item.status !== "approved" ? "承認する" : "更新する"}
                   </button>
                 </div>
               </article>
@@ -600,6 +909,23 @@ export default function AdminRequestsPage() {
               カフェ管理画面へ
             </Link>
           </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {STATUS_FILTER_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setStatusFilter(opt.value)}
+              className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                statusFilter === opt.value
+                  ? "border-primary bg-primary text-white"
+                  : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {error && (

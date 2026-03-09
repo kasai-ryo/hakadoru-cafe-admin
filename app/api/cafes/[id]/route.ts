@@ -252,9 +252,9 @@ export async function PATCH(
     );
   }
 
-  let body: { isPublic?: boolean };
+  let body: { isPublic?: boolean; approvalStatus?: string };
   try {
-    body = (await request.json()) as { isPublic?: boolean };
+    body = (await request.json()) as { isPublic?: boolean; approvalStatus?: string };
   } catch (error) {
     return NextResponse.json(
       { message: "JSONの解析に失敗しました", detail: String(error) },
@@ -262,9 +262,12 @@ export async function PATCH(
     );
   }
 
-  if (typeof body.isPublic !== "boolean") {
+  const hasIsPublic = typeof body.isPublic === "boolean";
+  const hasApprovalStatus = typeof body.approvalStatus === "string";
+
+  if (!hasIsPublic && !hasApprovalStatus) {
     return NextResponse.json(
-      { message: "isPublic(boolean) の指定が必要です。" },
+      { message: "isPublic(boolean) または approvalStatus(string) の指定が必要です。" },
       { status: 400 },
     );
   }
@@ -277,10 +280,17 @@ export async function PATCH(
     );
   }
 
-  const nextDeletedAt = body.isPublic ? null : new Date().toISOString();
+  const updatePayload: Record<string, unknown> = {};
+  if (hasIsPublic) {
+    updatePayload.deleted_at = body.isPublic ? null : new Date().toISOString();
+  }
+  if (hasApprovalStatus) {
+    updatePayload.approval_status = body.approvalStatus;
+  }
+
   const { data, error } = await supabase
     .from("cafes")
-    .update({ deleted_at: nextDeletedAt })
+    .update(updatePayload)
     .eq("id", cafeId)
     .select("*, cafe_images(*)")
     .maybeSingle();

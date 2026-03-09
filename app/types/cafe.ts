@@ -116,6 +116,7 @@ export interface Cafe {
   imageFoodPath?: string;
   imageOtherPaths: string[];
   imageCaptions: Partial<Record<ImageCategoryKey, string>>;
+  approval_status: "pending" | "approved" | "rejected" | "withdrawn";
   deleted_at: string | null;
   updated_at: string;
 }

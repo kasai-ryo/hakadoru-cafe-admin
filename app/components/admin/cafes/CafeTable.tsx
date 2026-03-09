@@ -25,6 +25,7 @@ export function CafeTable({ cafes }: CafeTableProps) {
             <th className="px-4 py-3 font-medium">店舗名 / エリア</th>
             <th className="px-4 py-3 font-medium">Wi-Fi / 電源席</th>
             <th className="px-4 py-3 font-medium">ステータス</th>
+            <th className="px-4 py-3 font-medium">承認</th>
             <th className="px-4 py-3 font-medium">表示状態</th>
             <th className="px-4 py-3 font-medium">更新日</th>
             <th className="px-4 py-3 font-medium text-right">詳細</th>
@@ -70,6 +71,11 @@ export function CafeTable({ cafes }: CafeTableProps) {
                   )}
                 >
                   {statusLabel(cafe.status)}
+                </span>
+              </td>
+              <td className="px-4 py-4">
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${approvalBadgeStyle(cafe.approval_status)}`}>
+                  {approvalLabel(cafe.approval_status)}
                 </span>
               </td>
               <td className="px-4 py-4">
@@ -125,6 +131,34 @@ function statusColor(status: Cafe["status"]) {
       return "bg-gray-200 text-gray-600";
     default:
       return "bg-gray-100 text-gray-600";
+  }
+}
+
+function approvalLabel(status: Cafe["approval_status"]) {
+  switch (status) {
+    case "approved":
+      return "承認済み";
+    case "rejected":
+      return "非承認";
+    case "withdrawn":
+      return "取り下げ";
+    case "pending":
+    default:
+      return "審査中";
+  }
+}
+
+function approvalBadgeStyle(status: Cafe["approval_status"]) {
+  switch (status) {
+    case "approved":
+      return "bg-emerald-50 text-emerald-700";
+    case "rejected":
+      return "bg-red-50 text-red-700";
+    case "withdrawn":
+      return "bg-gray-100 text-gray-600";
+    case "pending":
+    default:
+      return "bg-amber-50 text-amber-700";
   }
 }
 

@@ -27,6 +27,7 @@ export function AdminCafeDashboard({
     search: "",
     area: "all",
     status: "all",
+    approval: "all",
     showDeleted: true,
   });
 
@@ -54,13 +55,23 @@ export function AdminCafeDashboard({
           return false;
         }
       }
+      if (filters.approval !== "all") {
+        if (filters.approval === "approved" && cafe.approval_status !== "approved") {
+          return false;
+        }
+        if (filters.approval === "unapproved" && cafe.approval_status === "approved") {
+          return false;
+        }
+      }
       return true;
     });
   }, [cafeList, filters]);
 
   const areaOptions = useMemo(() => {
-    const unique = new Set(cafeList.map((cafe) => cafe.area));
-    return Array.from(unique);
+    const unique = new Set(
+      cafeList.map((cafe) => cafe.area).filter(Boolean),
+    );
+    return Array.from(unique).sort();
   }, [cafeList]);
 
   const handleLogin = async (id: string, password: string) => {

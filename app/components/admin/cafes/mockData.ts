@@ -105,6 +105,8 @@ export const mockCafes: Cafe[] = [
       drink: "ハンドドリップ",
       food: "季節のタルト",
     },
+
+    approval_status: "approved",
     deleted_at: null,
     updated_at: "2025-01-05T09:00:00+09:00",
   },
@@ -180,6 +182,8 @@ export const mockCafes: Cafe[] = [
       drink: "バリスタメニュー",
       food: "軽食カウンター",
     },
+
+    approval_status: "approved",
     deleted_at: null,
     updated_at: "2025-01-05T09:00:00+09:00",
   },
@@ -258,6 +262,8 @@ export const mockCafes: Cafe[] = [
       power: "壁際コンセント",
       drink: "ハンドドリップ",
     },
+
+    approval_status: "pending",
     deleted_at: "2025-01-02T09:00:00+09:00",
     updated_at: "2025-01-02T09:00:00+09:00",
   },
