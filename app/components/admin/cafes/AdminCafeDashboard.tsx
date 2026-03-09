@@ -27,6 +27,7 @@ export function AdminCafeDashboard({
     search: "",
     area: "all",
     status: "all",
+    approval: "all",
     showDeleted: true,
   });
 
@@ -54,6 +55,14 @@ export function AdminCafeDashboard({
           return false;
         }
       }
+      if (filters.approval !== "all") {
+        if (filters.approval === "approved" && cafe.approval_status !== "approved") {
+          return false;
+        }
+        if (filters.approval === "unapproved" && cafe.approval_status === "approved") {
+          return false;
+        }
+      }
       return true;
     });
   }, [cafeList, filters]);
@@ -64,7 +73,7 @@ export function AdminCafeDashboard({
         .map((cafe) => (typeof cafe.area === "string" ? cafe.area.trim() : ""))
         .filter((area) => area.length > 0),
     );
-    return Array.from(unique);
+    return Array.from(unique).sort();
   }, [cafeList]);
 
   const handleLogin = async (id: string, password: string) => {

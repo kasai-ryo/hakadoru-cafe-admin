@@ -204,6 +204,9 @@ CREATE TABLE cafes (
   ambience_modern INT CHECK (ambience_modern >= 1 AND ambience_modern <= 5),
   ambassador_comment TEXT,
   equipment_note TEXT,
+  approval_status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (
+      approval_status IN ('pending', 'approved', 'rejected', 'withdrawn')
+  ),
   deleted_at TIMESTAMP,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW()
@@ -314,6 +317,8 @@ COMMENT ON COLUMN cafes.latitude IS '緯度';
 
 COMMENT ON COLUMN cafes.longitude IS '経度';
 
+COMMENT ON COLUMN cafes.approval_status IS '承認ステータス（pending/approved/rejected/withdrawn）';
+
 COMMENT ON COLUMN cafes.deleted_at IS '論理削除日時（NULL=公開中）';
 
 -- ==================================================
@@ -419,16 +424,8 @@ COMMENT ON COLUMN favorites.cafe_id IS 'カフェID';
 CREATE TABLE cafe_requests (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4 (),
     account_id UUID NOT NULL REFERENCES accounts (id) ON DELETE CASCADE,
-    request_type VARCHAR(50) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (
-        status IN (
-            'pending',
-            'approved',
-            'rejected'
-        )
-    ),
-    data JSONB NOT NULL,
     admin_comment TEXT,
+    cafe_id UUID REFERENCES cafes (id) ON DELETE SET NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
     reviewed_at TIMESTAMP
@@ -437,9 +434,9 @@ CREATE TABLE cafe_requests (
 -- インデックス
 CREATE INDEX idx_cafe_requests_account_id ON cafe_requests (account_id);
 
-CREATE INDEX idx_cafe_requests_status ON cafe_requests (status);
-
 CREATE INDEX idx_cafe_requests_created_at ON cafe_requests (created_at DESC);
+
+CREATE INDEX idx_cafe_requests_cafe_id ON cafe_requests (cafe_id);
 
 COMMENT ON TABLE cafe_requests IS 'カフェ掲載リクエスト';
 
@@ -447,13 +444,9 @@ COMMENT ON COLUMN cafe_requests.id IS 'リクエストID';
 
 COMMENT ON COLUMN cafe_requests.account_id IS 'ユーザーID';
 
-COMMENT ON COLUMN cafe_requests.request_type IS 'リクエスト種別（new_cafe）';
-
-COMMENT ON COLUMN cafe_requests.status IS 'ステータス（pending/approved/rejected）';
-
-COMMENT ON COLUMN cafe_requests.data IS 'リクエストデータ（JSON）';
-
 COMMENT ON COLUMN cafe_requests.admin_comment IS '管理者コメント';
+
+COMMENT ON COLUMN cafe_requests.cafe_id IS '紐づくカフェID';
 
 COMMENT ON COLUMN cafe_requests.reviewed_at IS 'レビュー日時';
 

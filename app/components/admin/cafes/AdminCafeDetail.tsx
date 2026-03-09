@@ -6,6 +6,34 @@ import type { Cafe, CafeFormPayload, ImageCategoryKey } from "@/app/types/cafe";
 import { CafeFormDrawer } from "@/app/components/admin/cafes/CafeFormDrawer";
 import { CafeDeleteDialog } from "@/app/components/admin/cafes/CafeDeleteDialog";
 
+function approvalLabel(status: Cafe["approval_status"]) {
+  switch (status) {
+    case "approved":
+      return "承認済み";
+    case "rejected":
+      return "非承認";
+    case "withdrawn":
+      return "取り下げ";
+    case "pending":
+    default:
+      return "審査中";
+  }
+}
+
+function approvalBadgeStyle(status: Cafe["approval_status"]) {
+  switch (status) {
+    case "approved":
+      return "bg-emerald-100 text-emerald-800";
+    case "rejected":
+      return "bg-red-100 text-red-800";
+    case "withdrawn":
+      return "bg-gray-100 text-gray-600";
+    case "pending":
+    default:
+      return "bg-yellow-100 text-yellow-800";
+  }
+}
+
 interface AdminCafeDetailProps {
   cafe: Cafe;
   initialDraftSnapshotId?: string | null;
@@ -24,6 +52,8 @@ export function AdminCafeDetail({
   const [currentCafe, setCurrentCafe] = useState<Cafe>(cafe);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -338,6 +368,34 @@ export function AdminCafeDetail({
             ))}
           </div>
         </InfoSection>
+
+      </div>
+
+      <hr className="my-10 border-gray-300" />
+
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-gray-900">承認</h2>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-500">ステータス:</span>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${approvalBadgeStyle(currentCafe.approval_status)}`}
+          >
+            {approvalLabel(currentCafe.approval_status)}
+          </span>
+        </div>
+        {currentCafe.approval_status !== "approved" && (
+          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm text-amber-800">
+              承認操作はリクエスト管理画面から行えます。
+            </p>
+            <Link
+              href="/admin/requests"
+              className="mt-2 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+            >
+              リクエスト管理画面へ
+            </Link>
+          </div>
+        )}
       </div>
     </>
   );

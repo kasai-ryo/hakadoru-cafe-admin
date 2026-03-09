@@ -6,6 +6,7 @@ export interface CafeFilterState {
   search: string;
   area: string;
   status: CafeStatus | "all" | "deleted";
+  approval: "all" | "approved" | "unapproved";
   showDeleted: boolean;
 }
 
@@ -73,6 +74,21 @@ export function CafeFilterBar({
             <option value="recently_opened">最近オープン</option>
             <option value="closed">閉店</option>
             <option value="deleted">非公開</option>
+          </select>
+        </div>
+
+        <div className="flex-1">
+          <label className="text-sm font-medium text-gray-600">承認状態</label>
+          <select
+            value={filters.approval}
+            onChange={(event) =>
+              handleChange("approval", event.target.value as CafeFilterState["approval"])
+            }
+            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="all">すべて</option>
+            <option value="approved">承認済み</option>
+            <option value="unapproved">未承認</option>
           </select>
         </div>
       </div>

@@ -71,7 +71,11 @@ export async function POST(request: Request) {
     }
 
     try {
-      const insertPayload = buildCafeTableInsert(payload);
+      const insertPayload = {
+        ...buildCafeTableInsert(payload),
+        // 管理画面からの直接登録は承認済みとして扱う
+        approval_status: "approved",
+      };
       const { data, error } = await supabase
         .from("cafes")
         .insert(insertPayload)

@@ -88,6 +88,7 @@ erDiagram
         text ambassador_comment "アンバサダーコメント"
         decimal latitude "緯度"
         decimal longitude "経度"
+        string approval_status "承認ステータス"
         timestamp created_at "作成日時"
         timestamp updated_at "更新日時"
     }
@@ -118,9 +119,7 @@ erDiagram
     cafe_requests {
         uuid id PK "リクエストID"
         uuid account_id FK "ユーザーID"
-        varchar request_type "リクエスト種別（new_cafe）"
-        varchar status "ステータス（pending/approved/rejected）"
-        jsonb data "リクエストデータ（JSON）"
+        uuid cafe_id FK "紐づくカフェID"
         text admin_comment "管理者コメント"
         timestamp created_at "作成日時"
         timestamp updated_at "更新日時"
@@ -224,6 +223,7 @@ erDiagram
 | ambassador_comment | text           |                                   | アンバサダーコメント |
 | latitude           | decimal(10, 8) |                                   | 緯度                 |
 | longitude          | decimal(11, 8) |                                   | 経度                 |
+| approval_status    | varchar(20)    | NOT NULL, DEFAULT 'pending'       | 承認ステータス       |
 | created_at         | timestamp      | NOT NULL, DEFAULT NOW()           | 作成日時             |
 | updated_at         | timestamp      | NOT NULL, DEFAULT NOW()           | 更新日時             |
 
@@ -284,9 +284,7 @@ erDiagram
 | ------------- | ----------- | ------------------------------ | ---------------- |
 | id            | uuid        | PK, DEFAULT uuid_generate_v4() | リクエスト ID    |
 | account_id    | uuid        | FK → accounts(id), NOT NULL    | ユーザー ID      |
-| request_type  | varchar(50) | NOT NULL                       | リクエスト種別   |
-| status        | varchar(20) | NOT NULL, DEFAULT 'pending'    | ステータス       |
-| data          | jsonb       | NOT NULL                       | リクエストデータ |
+| cafe_id       | uuid        | FK → cafes(id)                 | 紐づくカフェID   |
 | admin_comment | text        |                                | 管理者コメント   |
 | created_at    | timestamp   | NOT NULL, DEFAULT NOW()        | 作成日時         |
 | updated_at    | timestamp   | NOT NULL, DEFAULT NOW()        | 更新日時         |
@@ -295,7 +293,7 @@ erDiagram
 **インデックス**:
 
 - `idx_cafe_requests_account_id` ON `account_id`
-- `idx_cafe_requests_status` ON `status`
+- `idx_cafe_requests_cafe_id` ON `cafe_id`
 
 ---
 

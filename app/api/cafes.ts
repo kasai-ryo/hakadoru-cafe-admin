@@ -15,7 +15,7 @@ const ALLOWED_SERVICE_VALUES = new Set([
 
 function normalizeServices(values: string[] | null | undefined): string[] {
   if (!Array.isArray(values)) return [];
-  const toServiceKey = (value: string) => {
+  const toServiceKey = (value: string): string | null => {
     const normalized = value.trim().replace(/\s+/g, "");
     switch (normalized) {
       case "ペットOK":
@@ -36,16 +36,10 @@ function normalizeServices(values: string[] | null | undefined): string[] {
         return null;
     }
   };
-  return Array.from(
-    new Set(
-      values
-        .map((value) => (typeof value === "string" ? toServiceKey(value) : null))
-        .filter(
-          (value): value is string =>
-            typeof value === "string" && ALLOWED_SERVICE_VALUES.has(value),
-        ),
-    ),
-  );
+  const mapped: string[] = values
+    .map((value) => (typeof value === "string" ? toServiceKey(value) : null))
+    .filter((value): value is string => value !== null && ALLOWED_SERVICE_VALUES.has(value));
+  return Array.from(new Set(mapped));
 }
 
 type CafeImageRow = {
@@ -107,6 +101,7 @@ type CafeTableRow = {
   equipment_note: string | null;
   latitude: number | null;
   longitude: number | null;
+  approval_status: string;
   deleted_at?: string | null;
   updated_at: string;
   cafe_images?: CafeImageRow[] | null;
@@ -215,6 +210,7 @@ export function changePayloadToCafe(
       });
       return captions;
     })(),
+    approval_status: base?.approval_status ?? "pending",
     deleted_at: base?.deleted_at ?? null,
     updated_at: now,
   };
@@ -290,6 +286,7 @@ export function buildCafeTableInsert(
     equipment_note: payload.equipmentNote || null,
     latitude: payload.latitude ?? null,
     longitude: payload.longitude ?? null,
+    approval_status: "pending",
     // deleted_at columnはDB側のデフォルトに任せる
   };
 }
@@ -383,6 +380,7 @@ export function mapCafeRowToCafe(
     imageFoodPath: pathMap.food ?? undefined,
     imageOtherPaths: otherList,
     imageCaptions: captionMap,
+    approval_status: row.approval_status as Cafe["approval_status"],
     deleted_at: "deleted_at" in row ? row.deleted_at ?? null : null,
     updated_at: row.updated_at,
   };

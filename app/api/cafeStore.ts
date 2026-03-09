@@ -9,7 +9,10 @@ export function listCafes() {
 }
 
 export function createCafe(payload: CafeFormPayload) {
-  const cafe = changePayloadToCafe(payload);
+  const cafe = {
+    ...changePayloadToCafe(payload),
+    approval_status: "approved" as const,
+  };
   cafes = [cafe, ...cafes];
   return cafe;
 }

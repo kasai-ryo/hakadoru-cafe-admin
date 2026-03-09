@@ -44,7 +44,8 @@ INSERT INTO
         crowd_levels,
         ambience_casual,
         ambience_modern,
-        ambassador_comment
+        ambassador_comment,
+        approval_status
     )
 VALUES (
         '11111111-1111-4111-8111-111111111111',
@@ -89,7 +90,8 @@ VALUES (
         '{"weekday0608":"normal","weekday0810":"normal","weekday1012":"normal","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"crowded","weekday2022":"crowded","weekend0608":"normal","weekend0810":"normal","weekend1012":"normal","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"crowded","weekend2022":"crowded"}',
         3,
         3,
-        '東京駅から近いサンプルカフェ1です。'
+        '東京駅から近いサンプルカフェ1です。',
+        'approved'
     ),
     (
         '22222222-2222-4222-8222-222222222222',
@@ -134,7 +136,8 @@ VALUES (
         '{"weekday0608":"normal","weekday0810":"normal","weekday1012":"normal","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"normal","weekday2022":"normal","weekend0608":"crowded","weekend0810":"crowded","weekend1012":"crowded","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"normal","weekend2022":"normal"}',
         2,
         4,
-        '夜景がきれいなサンプルカフェ2'
+        '夜景がきれいなサンプルカフェ2',
+        'approved'
     ),
     (
         '33333333-3333-4333-8333-333333333333',
@@ -179,7 +182,8 @@ VALUES (
         '{"weekday0608":"normal","weekday0810":"normal","weekday1012":"normal","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"normal","weekday2022":"normal","weekend0608":"normal","weekend0810":"normal","weekend1012":"normal","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"crowded","weekend2022":"crowded"}',
         4,
         2,
-        '静かな地下スペースのサンプルカフェ3'
+        '静かな地下スペースのサンプルカフェ3',
+        'approved'
     ),
     (
         '44444444-4444-4444-8444-444444444444',
@@ -224,7 +228,8 @@ VALUES (
         '{"weekday0608":"empty","weekday0810":"empty","weekday1012":"empty","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"normal","weekday2022":"normal","weekend0608":"crowded","weekend0810":"crowded","weekend1012":"crowded","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"normal","weekend2022":"normal"}',
         3,
         3,
-        '浅草観光の立ち寄りスポット'
+        '浅草観光の立ち寄りスポット',
+        'pending'
     ),
     (
         '55555555-5555-4555-8555-555555555555',
@@ -269,7 +274,8 @@ VALUES (
         '{"weekday0608":"normal","weekday0810":"normal","weekday1012":"normal","weekday1214":"normal","weekday1416":"normal","weekday1618":"normal","weekday1820":"normal","weekday2022":"normal","weekend0608":"normal","weekend0810":"normal","weekend1012":"normal","weekend1214":"crowded","weekend1416":"crowded","weekend1618":"crowded","weekend1820":"normal","weekend2022":"normal"}',
         4,
         4,
-        '地元の学生に人気のサンプルカフェ5'
+        '地元の学生に人気のサンプルカフェ5',
+        'pending'
     );
 
 INSERT INTO

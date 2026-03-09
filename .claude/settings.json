@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "MultiEdit",
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(ls *)",
+      "Bash(ls)",
+      "Bash(grep *)",
+      "Bash(brew *)",
+      "Bash(find *)",
+      "Bash(cat *)"
+    ],
+    "deny": [
+      "Edit(/etc/*)",
+      "Write(/etc/*)",
+      "Edit(/System/*)",
+      "Write(/System/*)",
+      "Edit(/Library/*)",
+      "Write(/Library/*)",
+      "Edit(/usr/*)",
+      "Write(/usr/*)",
+      "Edit(/bin/*)",
+      "Write(/bin/*)",
+      "Edit(/sbin/*)",
+      "Write(/sbin/*)",
+      "Edit(/private/*)",
+      "Write(/private/*)",
+      "Edit(/var/*)",
+      "Write(/var/*)",
+      "Edit(/tmp/*)",
+      "Write(/tmp/*)",
+      "Edit(~/.ssh/*)",
+      "Write(~/.ssh/*)",
+      "Edit(~/.zshrc)",
+      "Write(~/.zshrc)",
+      "Edit(~/.bashrc)",
+      "Write(~/.bashrc)",
+      "Edit(~/.bash_profile)",
+      "Write(~/.bash_profile)",
+      "Edit(~/.profile)",
+      "Write(~/.profile)",
+      "Edit(~/.zprofile)",
+      "Write(~/.zprofile)"
+    ]
+  }
+}
