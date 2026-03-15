@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+} from "react";
 import prefectures from "@/app/data/prefectures.json";
 import type {
   Cafe,
@@ -292,7 +299,6 @@ type DraftSaveFeedback =
 const createEmptyForm = (): CafeFormPayload => ({
   name: "",
   facilityType: "cafe",
-  area: "",
   prefecture: "東京都",
   postalCode: "",
   addressLine1: "",
@@ -314,17 +320,12 @@ const createEmptyForm = (): CafeFormPayload => ({
   outlet: "all",
   lighting: "normal",
   meetingRoom: false,
-  allowsShortLeave: false,
   hasPrivateBooths: false,
-  parking: false,
   smoking: "no_smoking",
-  coffeePrice: 0,
-  bringOwnFood: "not_allowed",
   alcohol: "unavailable",
   mainMenu: "",
   services: [],
   paymentMethods: [],
-  customerTypes: [],
   recommendedWorkStyles: [],
   crowdMatrix: createEmptyCrowdMatrix(),
   ambienceCasual: 3,
@@ -343,7 +344,6 @@ const createEmptyForm = (): CafeFormPayload => ({
 const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   name: cafe.name,
   facilityType: cafe.facilityType,
-  area: cafe.area,
   prefecture: cafe.prefecture,
   postalCode: cafe.postalCode,
   addressLine1: cafe.addressLine1,
@@ -365,17 +365,12 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   outlet: cafe.outlet,
   lighting: cafe.lighting,
   meetingRoom: cafe.meetingRoom,
-  allowsShortLeave: cafe.allowsShortLeave,
   hasPrivateBooths: cafe.hasPrivateBooths,
-  parking: cafe.parking,
   smoking: cafe.smoking,
-  coffeePrice: cafe.coffeePrice,
-  bringOwnFood: cafe.bringOwnFood,
   alcohol: cafe.alcohol,
   mainMenu: cafe.mainMenu,
   services: cafe.services,
   paymentMethods: cafe.paymentMethods,
-  customerTypes: cafe.customerTypes,
   recommendedWorkStyles: cafe.recommendedWorkStyles ?? [],
   crowdMatrix: normalizeCrowdMatrix(cafe.crowdMatrix),
   ambienceCasual: cafe.ambienceCasual,
@@ -485,12 +480,6 @@ function deserializeFormState(serialized: SerializedFormState): CafeFormPayload 
     crowdMatrix: normalizeCrowdMatrix(serialized.crowdMatrix),
     images: { ...base.images },
   };
-  next.bringOwnFood =
-    next.bringOwnFood === "allowed" ||
-      next.bringOwnFood === "not_allowed" ||
-      next.bringOwnFood === "drinks_only"
-      ? next.bringOwnFood
-      : base.bringOwnFood;
   IMAGE_CATEGORIES.forEach(({ key }) => {
     const entry = serialized.images[key];
     if (!entry || !entry.storagePath) {
@@ -859,10 +848,7 @@ export function CafeFormDrawer({
   };
 
   const handleChipToggle = (
-    key:
-      | "services"
-      | "customerTypes"
-      | "recommendedWorkStyles",
+    key: "services" | "recommendedWorkStyles",
     value: string,
   ) => {
     setFormState((prev) => {
@@ -1427,13 +1413,7 @@ function InfoStep({
     key: K,
     value: CafeFormPayload[K],
   ) => void;
-  onChipToggle: (
-    key:
-      | "services"
-      | "customerTypes"
-      | "recommendedWorkStyles",
-    value: string,
-  ) => void;
+  onChipToggle: (key: "services" | "recommendedWorkStyles", value: string) => void;
   onHolidayToggle: (day: string) => void;
   onCrowdChange: (slot: keyof CrowdMatrix, value: CrowdLevel) => void;
   onPostalLookup: () => void;
@@ -1842,6 +1822,39 @@ function ImageUploadCard({
   onClear?: () => void;
 }) {
   const inputId = `${label}-input`;
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleFileSelection = (files: FileList | null) => {
+    const file = Array.from(files ?? []).find((candidate) =>
+      candidate.type.startsWith("image/"),
+    );
+    if (file) {
+      onFile(file);
+    }
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    if (!event.dataTransfer.types.includes("Files")) {
+      return;
+    }
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      return;
+    }
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    handleFileSelection(event.dataTransfer.files);
+  };
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
@@ -1892,19 +1905,29 @@ function ImageUploadCard({
         accept="image/*"
         className="hidden"
         onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) {
-            onFile(file);
-          }
+          handleFileSelection(event.target.files);
           event.target.value = "";
         }}
       />
       <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
         <label
           htmlFor={inputId}
-          className="flex-1 cursor-pointer rounded-full bg-gray-900 px-5 py-2 text-center text-sm font-semibold text-white hover:bg-gray-800"
+          onDragOver={handleDragOver}
+          onDragEnter={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`flex-1 cursor-pointer rounded-2xl border-2 border-dashed px-5 py-4 text-center text-sm font-semibold transition-colors ${
+            isDragging
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-gray-300 bg-gray-50 text-gray-900 hover:border-gray-400 hover:bg-gray-100"
+          }`}
         >
-          {entry ? "写真を差し替える" : "写真をアップロード"}
+          <span className="block">
+            {entry ? "写真を差し替える" : "写真をアップロード"}
+          </span>
+          <span className="mt-1 block text-xs font-medium text-gray-500">
+            ここにドラッグ&ドロップも可能
+          </span>
         </label>
         <input
           type="text"

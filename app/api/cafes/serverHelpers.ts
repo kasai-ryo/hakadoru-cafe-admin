@@ -14,7 +14,6 @@ export const REQUIRED_TEXT_FIELDS: Array<
     | "prefecture"
     | "postalCode"
     | "addressLine1"
-    | "addressLine2"
     | "nearestStation"
   >
 > = [
@@ -23,9 +22,8 @@ export const REQUIRED_TEXT_FIELDS: Array<
   "prefecture",
   "postalCode",
   "addressLine1",
-    "addressLine2",
-    "nearestStation",
-  ];
+  "nearestStation",
+];
 
 export const ALL_IMAGE_CATEGORIES: ImageCategoryKey[] = [
   "main",

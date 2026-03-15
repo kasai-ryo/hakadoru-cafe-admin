@@ -23,19 +23,29 @@ function approvalLabel(status: Cafe["approval_status"]) {
 function approvalBadgeStyle(status: Cafe["approval_status"]) {
   switch (status) {
     case "approved":
-      return "bg-emerald-100 text-emerald-800";
+      return "bg-emerald-100 text-emerald-800 border border-emerald-200";
     case "rejected":
-      return "bg-red-100 text-red-800";
+      return "bg-rose-100 text-rose-800 border border-rose-200";
     case "withdrawn":
-      return "bg-gray-100 text-gray-600";
+      return "bg-slate-100 text-slate-700 border border-slate-200";
     case "pending":
     default:
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-amber-100 text-amber-800 border border-amber-200";
   }
 }
 
 interface AdminCafeDetailProps {
   cafe: Cafe;
+  cafeRequest?: {
+    id: string;
+    accountId: string;
+    accountName: string | null;
+    adminComment: string | null;
+    createdAt: string;
+    updatedAt: string;
+    reviewedAt: string | null;
+  } | null;
+  initialAuthenticated?: boolean;
   initialDraftSnapshotId?: string | null;
 }
 
@@ -45,17 +55,30 @@ const SESSION_KEY = "hakadoru-admin-session";
 
 export function AdminCafeDetail({
   cafe,
+  cafeRequest = null,
+  initialAuthenticated = false,
   initialDraftSnapshotId,
 }: AdminCafeDetailProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(initialAuthenticated);
   const [authError, setAuthError] = useState("");
   const [currentCafe, setCurrentCafe] = useState<Cafe>(cafe);
+  const [currentCafeRequest, setCurrentCafeRequest] = useState(cafeRequest);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [requestStatus, setRequestStatus] = useState<"approved" | "rejected">(
+    cafe.approval_status === "rejected" ? "rejected" : "approved",
+  );
+  const [requestAdminComment, setRequestAdminComment] = useState(cafeRequest?.adminComment ?? "");
+  const [isSavingRequest, setIsSavingRequest] = useState(false);
+  const [requestSaveError, setRequestSaveError] = useState("");
+  const [requestSaveMessage, setRequestSaveMessage] = useState("");
 
 
 
   useEffect(() => {
+    if (initialAuthenticated) {
+      return;
+    }
     if (typeof window === "undefined") {
       return;
     }
@@ -63,11 +86,20 @@ export function AdminCafeDetail({
     if (stored === "authenticated") {
       setIsAuthenticated(true);
     }
-  }, []);
+  }, [initialAuthenticated]);
 
   useEffect(() => {
     setCurrentCafe(cafe);
   }, [cafe]);
+
+  useEffect(() => {
+    setCurrentCafeRequest(cafeRequest);
+    setRequestAdminComment(cafeRequest?.adminComment ?? "");
+  }, [cafeRequest]);
+
+  useEffect(() => {
+    setRequestStatus(currentCafe.approval_status === "rejected" ? "rejected" : "approved");
+  }, [currentCafe.approval_status]);
 
   useEffect(() => {
     if (initialDraftSnapshotId) {
@@ -150,6 +182,70 @@ export function AdminCafeDetail({
     setCurrentCafe(result.data);
   };
 
+  const handleRequestReviewSave = async () => {
+    if (!currentCafeRequest) {
+      return;
+    }
+
+    setIsSavingRequest(true);
+    setRequestSaveError("");
+    setRequestSaveMessage("");
+
+    try {
+      const response = await fetch("/api/admin/requests", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: currentCafeRequest.id,
+          kind: "cafe_request",
+          status: requestStatus,
+          adminComment: requestAdminComment,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        message?: string;
+        data?: {
+          adminComment: string | null;
+          reviewedAt: string | null;
+          updatedAt: string;
+          status: Cafe["approval_status"];
+        };
+      };
+
+      if (!response.ok || !result.data) {
+        throw new Error(result.message ?? "掲載リクエストの更新に失敗しました。");
+      }
+
+      setCurrentCafe((prev) => ({
+        ...prev,
+        approval_status: result.data?.status ?? prev.approval_status,
+      }));
+      setCurrentCafeRequest((prev) =>
+        prev
+          ? {
+              ...prev,
+              adminComment: result.data?.adminComment ?? null,
+              reviewedAt: result.data?.reviewedAt ?? null,
+              updatedAt: result.data?.updatedAt ?? prev.updatedAt,
+            }
+          : prev,
+      );
+      setRequestAdminComment(result.data.adminComment ?? "");
+      setRequestSaveMessage(
+        requestStatus === "approved" ? "掲載リクエストを承認しました。" : "掲載リクエストを非承認にしました。",
+      );
+    } catch (error) {
+      setRequestSaveError(
+        (error as { message?: string }).message ?? "掲載リクエストの更新に失敗しました。",
+      );
+    } finally {
+      setIsSavingRequest(false);
+    }
+  };
+
   const lockedView = (
     <div className="mx-auto w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
       <h1 className="text-2xl	font-semibold text-gray-900">管理者ログイン</h1>
@@ -199,6 +295,115 @@ export function AdminCafeDetail({
       </header>
 
       <div className="mt-6 space-y-6">
+        <InfoSection title="掲載リクエスト">
+          {currentCafeRequest ? (
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                <p className="text-sm font-semibold text-blue-900">この詳細ページのカフェ情報が掲載申請内容です。</p>
+                <p className="mt-1 text-sm text-blue-800">
+                  内容を確認した上で、下の審査パネルから管理者コメントと承認結果を登録してください。
+                </p>
+              </div>
+
+              <InfoGrid
+                items={[
+                  {
+                    label: "申請者",
+                    value: currentCafeRequest.accountName
+                      ? `${currentCafeRequest.accountName}（${currentCafeRequest.accountId}）`
+                      : currentCafeRequest.accountId,
+                  },
+                  { label: "申請ID", value: currentCafeRequest.id },
+                  { label: "申請日時", value: formatDateTime(currentCafeRequest.createdAt) },
+                  { label: "最終更新", value: formatDateTime(currentCafeRequest.updatedAt) },
+                  { label: "レビュー日時", value: formatDateTime(currentCafeRequest.reviewedAt) },
+                  {
+                    label: "現在の審査状態",
+                    value: (
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${approvalBadgeStyle(currentCafe.approval_status)}`}
+                      >
+                        {approvalLabel(currentCafe.approval_status)}
+                      </span>
+                    ),
+                  },
+                ]}
+              />
+
+              <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+                <h3 className="text-base font-semibold text-gray-900">審査パネル</h3>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">審査結果</p>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800">
+                        <input
+                          type="radio"
+                          name="requestStatus"
+                          value="approved"
+                          checked={requestStatus === "approved"}
+                          onChange={() => setRequestStatus("approved")}
+                          disabled={isSavingRequest}
+                        />
+                        承認
+                      </label>
+                      <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-800">
+                        <input
+                          type="radio"
+                          name="requestStatus"
+                          value="rejected"
+                          checked={requestStatus === "rejected"}
+                          onChange={() => setRequestStatus("rejected")}
+                          disabled={isSavingRequest}
+                        />
+                        非承認
+                      </label>
+                    </div>
+                  </div>
+
+                  <label className="block">
+                    <span className="text-sm font-medium text-gray-700">管理者コメント</span>
+                    <textarea
+                      value={requestAdminComment}
+                      onChange={(event) => setRequestAdminComment(event.target.value)}
+                      rows={4}
+                      disabled={isSavingRequest}
+                      placeholder="審査結果の理由や補足を入力"
+                      className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </label>
+
+                  {requestSaveError && (
+                    <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600">
+                      {requestSaveError}
+                    </p>
+                  )}
+                  {requestSaveMessage && (
+                    <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+                      {requestSaveMessage}
+                    </p>
+                  )}
+
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => void handleRequestReviewSave()}
+                      disabled={isSavingRequest}
+                      className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {isSavingRequest ? "更新中..." : requestStatus === "approved" ? "承認する" : "非承認にする"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-600">
+              このカフェに紐づく掲載リクエストは見つかりませんでした。
+            </div>
+          )}
+        </InfoSection>
+
         <InfoSection title="基本情報">
           <InfoGrid
             items={[
@@ -383,19 +588,9 @@ export function AdminCafeDetail({
             {approvalLabel(currentCafe.approval_status)}
           </span>
         </div>
-        {currentCafe.approval_status !== "approved" && (
-          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-4">
-            <p className="text-sm text-amber-800">
-              承認操作はリクエスト管理画面から行えます。
-            </p>
-            <Link
-              href="/admin/requests"
-              className="mt-2 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
-            >
-              リクエスト管理画面へ
-            </Link>
-          </div>
-        )}
+        <p className="text-sm text-gray-600">
+          掲載審査は上部の「掲載リクエスト」セクションから操作できます。
+        </p>
       </div>
     </>
   );
@@ -506,6 +701,19 @@ function formatList(list?: string[] | null) {
     return "未設定";
   }
   return list.join("、");
+}
+
+function formatDateTime(isoString: string | null) {
+  if (!isoString) {
+    return "ー";
+  }
+
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) {
+    return isoString;
+  }
+
+  return date.toLocaleString("ja-JP");
 }
 
 const REGULAR_HOLIDAY_LABELS: Record<string, string> = {

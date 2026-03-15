@@ -151,14 +151,14 @@ function approvalLabel(status: Cafe["approval_status"]) {
 function approvalBadgeStyle(status: Cafe["approval_status"]) {
   switch (status) {
     case "approved":
-      return "bg-emerald-50 text-emerald-700";
+      return "border border-emerald-200 bg-emerald-50 text-emerald-700";
     case "rejected":
-      return "bg-red-50 text-red-700";
+      return "border border-rose-200 bg-rose-50 text-rose-700";
     case "withdrawn":
-      return "bg-gray-100 text-gray-600";
+      return "border border-slate-200 bg-slate-100 text-slate-700";
     case "pending":
     default:
-      return "bg-amber-50 text-amber-700";
+      return "border border-amber-200 bg-amber-50 text-amber-700";
   }
 }
 

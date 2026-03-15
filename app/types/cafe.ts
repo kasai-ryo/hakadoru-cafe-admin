@@ -2,12 +2,7 @@ export type CafeStatus = "open" | "recently_opened" | "closed";
 export type FacilityType = "cafe" | "coworking" | "hybrid" | "other";
 export type OutletAvailability = "all" | "most" | "half" | "some" | "none";
 export type LightingType = "dark" | "normal" | "bright";
-export type SmokingOption =
-  | "no_smoking"
-  | "separated"
-  | "e_cigarette"
-  | "allowed";
-export type BringOwnFoodOption = "allowed" | "not_allowed" | "drinks_only";
+export type SmokingOption = "no_smoking" | "allowed";
 export type AlcoholOption = "available" | "night_only" | "unavailable";
 export type CrowdLevel = "empty" | "normal" | "crowded" | "unknown" | "closed";
 export type CrowdSlotKey =
@@ -85,17 +80,12 @@ export interface Cafe {
   outlet: OutletAvailability;
   lighting: LightingType;
   meetingRoom: boolean;
-  allowsShortLeave: boolean;
   hasPrivateBooths: boolean;
-  parking: boolean;
   smoking: SmokingOption;
-  coffeePrice: number;
-  bringOwnFood: BringOwnFoodOption;
   alcohol: AlcoholOption;
   mainMenu: string;
   services: string[];
   paymentMethods: string[];
-  customerTypes: string[];
   recommendedWorkStyles: string[];
   crowdMatrix: CrowdMatrix;
   ambienceCasual: number;
@@ -124,7 +114,6 @@ export interface Cafe {
 export interface CafeFormPayload {
   name: string;
   facilityType: FacilityType;
-  area: string;
   prefecture: string;
   postalCode: string;
   addressLine1: string;
@@ -146,17 +135,12 @@ export interface CafeFormPayload {
   outlet: OutletAvailability;
   lighting: LightingType;
   meetingRoom: boolean;
-  allowsShortLeave: boolean;
   hasPrivateBooths: boolean;
-  parking: boolean;
   smoking: SmokingOption;
-  coffeePrice: number;
-  bringOwnFood: BringOwnFoodOption;
   alcohol: AlcoholOption;
   mainMenu: string;
   services: string[];
   paymentMethods: string[];
-  customerTypes: string[];
   recommendedWorkStyles: string[];
   crowdMatrix: CrowdMatrix;
   ambienceCasual: number;

@@ -11,14 +11,22 @@ export default async function AdminCafesPage() {
   let cafes: Cafe[] = [];
 
   if (isAuthenticated && supabase) {
-    const { data, error } = await supabase
-      .from("cafes")
-      .select("*, cafe_images(*)")
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error("[admin/cafes] Failed to fetch cafes", error);
-    } else if (data) {
-      cafes = data.map((row) => mapCafeRowToCafe(row));
+    try {
+      const timeoutSignal = AbortSignal.timeout(5000);
+      const { data, error } = await supabase
+        .from("cafes")
+        .select("*, cafe_images(*)")
+        .order("created_at", { ascending: false })
+        .abortSignal(timeoutSignal);
+      if (error) {
+        console.error("[admin/cafes] Failed to fetch cafes", error);
+        cafes = mockCafes;
+      } else if (data) {
+        cafes = data.map((row) => mapCafeRowToCafe(row));
+      }
+    } catch (error) {
+      console.error("[admin/cafes] Unexpected fetch error", error);
+      cafes = mockCafes;
     }
   } else if (isAuthenticated) {
     cafes = mockCafes;

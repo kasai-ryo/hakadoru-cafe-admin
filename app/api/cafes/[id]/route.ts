@@ -114,13 +114,6 @@ export async function PUT(request: Request, context: RouteContext) {
       ...buildCafeTableInsert(payload),
       // 管理画面からの直接更新は承認済みとして扱う
       approval_status: "approved",
-      // 編集対象外カラムは既存値を保持
-      area: existingCafe.area,
-      allow_short_leave: existingCafe.allow_short_leave,
-      parking: existingCafe.parking,
-      coffee_price: existingCafe.coffee_price,
-      bring_own_food: existingCafe.bring_own_food,
-      customer_types: existingCafe.customer_types,
     };
     const { data: updatedCafe, error: updateError } = await supabase
       .from("cafes")

@@ -55,7 +55,6 @@ type CafeTableRow = {
   id: string;
   name: string;
   facility_type: Cafe["facilityType"];
-  area: string;
   prefecture: string;
   postal_code: string;
   address_line1: string;
@@ -78,17 +77,12 @@ type CafeTableRow = {
   outlet: Cafe["outlet"];
   lighting: Cafe["lighting"];
   meeting_room: boolean;
-  allow_short_leave: boolean;
   private_booths: boolean;
-  parking: boolean;
   smoking: Cafe["smoking"];
-  coffee_price: number | null;
-  bring_own_food: Cafe["bringOwnFood"];
   alcohol: Cafe["alcohol"];
   main_menu: string | null;
   services: string[] | null;
   payment_methods: string[] | null;
-  customer_types: string[] | null;
   recommended_work: string[];
   crowd_levels: Partial<Record<string, CrowdLevel>> | null;
   ambience_casual: number;
@@ -127,7 +121,7 @@ export function changePayloadToCafe(
     id: base?.id ?? `draft-${globalThis.crypto.randomUUID()}`,
     name: payload.name,
     facilityType: payload.facilityType,
-    area: inferAreaFromAddress(payload.addressLine1, payload.prefecture),
+    area: inferAreaLabel(payload.addressLine1, payload.prefecture),
     prefecture: payload.prefecture,
     postalCode: payload.postalCode,
     addressLine1: payload.addressLine1,
@@ -153,17 +147,12 @@ export function changePayloadToCafe(
     outlet: payload.outlet,
     lighting: payload.lighting,
     meetingRoom: payload.meetingRoom,
-    allowsShortLeave: false,
     hasPrivateBooths: payload.hasPrivateBooths,
-    parking: false,
     smoking: payload.smoking,
-    coffeePrice: 0,
-    bringOwnFood: "not_allowed",
     alcohol: payload.alcohol,
     mainMenu: payload.mainMenu,
     services: normalizeServices(payload.services),
     paymentMethods: payload.paymentMethods,
-    customerTypes: [],
     recommendedWorkStyles: payload.recommendedWorkStyles,
     crowdMatrix: payload.crowdMatrix,
     ambienceCasual: payload.ambienceCasual,
@@ -221,9 +210,7 @@ type CafeTableInsert = Omit<
   "id" | "updated_at" | "cafe_images"
 >;
 
-export function buildCafeTableInsert(
-  payload: CafeFormPayload,
-): CafeTableInsert {
+export function buildCafeTableInsert(payload: CafeFormPayload): CafeTableInsert {
   const seats =
     typeof payload.seats === "number"
       ? payload.seats
@@ -240,7 +227,6 @@ export function buildCafeTableInsert(
   return {
     name: payload.name,
     facility_type: payload.facilityType,
-    area: inferAreaFromAddress(payload.addressLine1, payload.prefecture),
     prefecture: payload.prefecture,
     postal_code: payload.postalCode,
     address_line1: payload.addressLine1,
@@ -263,17 +249,12 @@ export function buildCafeTableInsert(
     outlet: payload.outlet,
     lighting: payload.lighting,
     meeting_room: payload.meetingRoom,
-    allow_short_leave: false,
     private_booths: payload.hasPrivateBooths,
-    parking: false,
     smoking: payload.smoking,
-    coffee_price: null,
-    bring_own_food: normalizeBringOwnFood(null),
     alcohol: payload.alcohol,
     main_menu: payload.mainMenu || null,
     services: normalizeServices(payload.services),
     payment_methods: payload.paymentMethods,
-    customer_types: [],
     recommended_work: payload.recommendedWorkStyles,
     crowd_levels: payload.crowdMatrix,
     ambience_casual: payload.ambienceCasual,
@@ -291,20 +272,7 @@ export function buildCafeTableInsert(
   };
 }
 
-function normalizeBringOwnFood(
-  value: unknown,
-): CafeFormPayload["bringOwnFood"] {
-  if (
-    value === "allowed" ||
-    value === "not_allowed" ||
-    value === "drinks_only"
-  ) {
-    return value;
-  }
-  return "not_allowed";
-}
-
-function inferAreaFromAddress(
+function inferAreaLabel(
   addressLine1: string,
   prefecture: string,
 ): string {
@@ -326,7 +294,7 @@ export function mapCafeRowToCafe(
     id: row.id,
     name: row.name,
     facilityType: row.facility_type,
-    area: row.area,
+    area: inferAreaLabel(row.address_line1, row.prefecture),
     prefecture: row.prefecture,
     postalCode: row.postal_code,
     addressLine1: row.address_line1,
@@ -349,17 +317,12 @@ export function mapCafeRowToCafe(
     outlet: row.outlet,
     lighting: row.lighting,
     meetingRoom: row.meeting_room,
-    allowsShortLeave: row.allow_short_leave,
     hasPrivateBooths: row.private_booths,
-    parking: row.parking,
     smoking: row.smoking,
-    coffeePrice: row.coffee_price ?? 0,
-    bringOwnFood: row.bring_own_food,
     alcohol: row.alcohol,
     mainMenu: row.main_menu ?? "",
     services: normalizeServices(row.services),
     paymentMethods: row.payment_methods ?? [],
-    customerTypes: row.customer_types ?? [],
     recommendedWorkStyles: row.recommended_work ?? [],
     crowdMatrix: normalizeCrowdMatrix(row.crowd_levels),
     ambienceCasual: row.ambience_casual,
