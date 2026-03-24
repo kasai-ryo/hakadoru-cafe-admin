@@ -1,6 +1,5 @@
 import { Buffer } from "node:buffer";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { normalize } from "@geolonia/normalize-japanese-addresses";
 import type {
   CafeFormPayload,
   ImageCategoryKey,
@@ -46,6 +45,10 @@ export const ALL_IMAGE_CATEGORIES: ImageCategoryKey[] = [
 
 const STORAGE_BUCKET =
   process.env.SUPABASE_STORAGE_BUCKET?.trim() || "cafeimages";
+
+function getGoogleMapsApiKey() {
+  return process.env.GOOGLE_MAPS_API_KEY?.trim();
+}
 
 export function validateCafePayload(payload: Partial<CafeFormPayload>) {
   const errors: string[] = [];
@@ -206,7 +209,6 @@ export async function geocodeCafeAddress(
     payload.prefecture,
     payload.addressLine1,
     payload.addressLine2,
-    payload.addressLine3,
   ]
     .filter((part) => part && part.trim().length > 0)
     .map((part) => part.trim());
@@ -214,10 +216,66 @@ export async function geocodeCafeAddress(
   if (!query) {
     return null;
   }
-  const result = await normalize(query);
-  const lat = result?.point?.lat;
-  const lng = result?.point?.lng;
-  if (typeof lat === "number" && typeof lng === "number") {
+  const googleMapsApiKey = getGoogleMapsApiKey();
+  if (!googleMapsApiKey) {
+    console.warn("[cafes] GOOGLE_MAPS_API_KEY is not set");
+    return null;
+  }
+  console.log("[cafes] Geocoding query", {
+    query,
+    postalCode: payload.postalCode,
+    prefecture: payload.prefecture,
+    addressLine1: payload.addressLine1,
+    addressLine2: payload.addressLine2,
+    addressLine3: payload.addressLine3,
+  });
+  const endpoint = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+  endpoint.searchParams.set("address", query);
+  endpoint.searchParams.set("key", googleMapsApiKey);
+  endpoint.searchParams.set("language", "ja");
+  endpoint.searchParams.set("region", "jp");
+
+  const response = await fetch(endpoint.toString(), {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Google Geocoding API failed: ${response.status}`);
+  }
+
+  const result = (await response.json()) as {
+    status?: string;
+    error_message?: string;
+    results?: Array<{
+      formatted_address?: string;
+      geometry?: {
+        location?: {
+          lat?: number;
+          lng?: number;
+        };
+        location_type?: string;
+      };
+      partial_match?: boolean;
+      place_id?: string;
+      types?: string[];
+    }>;
+  };
+  const firstResult = result.results?.[0];
+  const lat = firstResult?.geometry?.location?.lat;
+  const lng = firstResult?.geometry?.location?.lng;
+  console.log("[cafes] Geocoding result", {
+    query,
+    status: result.status ?? null,
+    errorMessage: result.error_message ?? null,
+    latitude: lat ?? null,
+    longitude: lng ?? null,
+    formattedAddress: firstResult?.formatted_address ?? null,
+    locationType: firstResult?.geometry?.location_type ?? null,
+    partialMatch: firstResult?.partial_match ?? null,
+    placeId: firstResult?.place_id ?? null,
+    types: firstResult?.types ?? null,
+  });
+  if (result.status === "OK" && typeof lat === "number" && typeof lng === "number") {
     return { latitude: lat, longitude: lng };
   }
   return null;

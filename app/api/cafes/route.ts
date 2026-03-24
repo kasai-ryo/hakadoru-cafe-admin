@@ -38,17 +38,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ errors }, { status: 422 });
   }
 
-  try {
-    const coords = await geocodeCafeAddress(payload);
-    if (coords) {
-      payload = {
-        ...payload,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-      };
+  if (payload.latitude == null || payload.longitude == null) {
+    try {
+      const coords = await geocodeCafeAddress(payload);
+      if (coords) {
+        payload = {
+          ...payload,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        };
+      }
+    } catch (geoError) {
+      console.warn("[cafes:POST] Geocoding failed", geoError);
     }
-  } catch (geoError) {
-    console.warn("[cafes:POST] Geocoding failed", geoError);
   }
 
   const supabase = getSupabaseServerClient();

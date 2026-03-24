@@ -4,7 +4,6 @@ import { createSign, randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { createClient } from "@supabase/supabase-js";
-import { normalize } from "@geolonia/normalize-japanese-addresses";
 
 const DEFAULT_SPREADSHEET_ID = "1CYjd4uOKQuMjeO1vCt9X7vrpArU09MaXjNSxnFb4wNM";
 const DEFAULT_SHEET_NAME = "シート1";
@@ -124,6 +123,10 @@ const IMAGE_HEADER_MAP = {
   other9: ["画像_その他9_パス", "画像_その他9_キャプション"],
   other10: ["画像_その他10_パス", "画像_その他10_キャプション"],
 };
+
+function getGoogleMapsApiKey() {
+  return process.env.GOOGLE_MAPS_API_KEY?.trim();
+}
 
 function parseArgs(argv) {
   const args = {
@@ -692,17 +695,57 @@ function buildCafeTableInsert(payload) {
 }
 
 async function geocodeFromPayload(payload) {
-  const queryParts = [payload.prefecture, payload.addressLine1, payload.addressLine2, payload.addressLine3]
+  const queryParts = [payload.prefecture, payload.addressLine1, payload.addressLine2]
     .filter((part) => part && String(part).trim().length > 0)
     .map((part) => String(part).trim());
   const query = queryParts.join(" ") || payload.postalCode;
   if (!query) return null;
+  const googleMapsApiKey = getGoogleMapsApiKey();
+  if (!googleMapsApiKey) {
+    console.warn("[cafes:import] GOOGLE_MAPS_API_KEY is not set");
+    return null;
+  }
 
   try {
-    const result = await normalize(query);
-    const lat = result?.point?.lat;
-    const lng = result?.point?.lng;
-    if (typeof lat === "number" && typeof lng === "number") {
+    console.log("[cafes:import] Geocoding query", {
+      query,
+      postalCode: payload.postalCode,
+      prefecture: payload.prefecture,
+      addressLine1: payload.addressLine1,
+      addressLine2: payload.addressLine2,
+      addressLine3: payload.addressLine3,
+    });
+    const endpoint = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+    endpoint.searchParams.set("address", query);
+    endpoint.searchParams.set("key", googleMapsApiKey);
+    endpoint.searchParams.set("language", "ja");
+    endpoint.searchParams.set("region", "jp");
+
+    const response = await fetch(endpoint.toString(), {
+      method: "GET",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      throw new Error(`Google Geocoding API failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const firstResult = result.results?.[0];
+    const lat = firstResult?.geometry?.location?.lat;
+    const lng = firstResult?.geometry?.location?.lng;
+    console.log("[cafes:import] Geocoding result", {
+      query,
+      status: result.status ?? null,
+      errorMessage: result.error_message ?? null,
+      latitude: lat ?? null,
+      longitude: lng ?? null,
+      formattedAddress: firstResult?.formatted_address ?? null,
+      locationType: firstResult?.geometry?.location_type ?? null,
+      partialMatch: firstResult?.partial_match ?? null,
+      placeId: firstResult?.place_id ?? null,
+      types: firstResult?.types ?? null,
+    });
+    if (result.status === "OK" && typeof lat === "number" && typeof lng === "number") {
       return { latitude: lat, longitude: lng };
     }
   } catch (error) {
