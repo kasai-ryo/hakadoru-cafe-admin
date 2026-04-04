@@ -193,6 +193,14 @@ const CROWD_TIME_ROWS: Array<{
   },
 ];
 
+const TIME_SELECT_OPTIONS = Array.from({ length: 24 * 4 }, (_, index) => {
+  const totalMinutes = index * 15;
+  const hour = `${Math.floor(totalMinutes / 60)}`.padStart(2, "0");
+  const minute = `${totalMinutes % 60}`.padStart(2, "0");
+  const value = `${hour}:${minute}`;
+  return { label: value, value };
+});
+
 const IMAGE_CATEGORIES: Array<{
   key: ImageCategoryKey;
   label: string;
@@ -334,6 +342,10 @@ const createEmptyForm = (): CafeFormPayload => ({
   website: "",
   instagramUrl: "",
   tiktokUrl: "",
+  firstRequestAccountId: "",
+  instagramPostUrl1: "",
+  instagramPostUrl2: "",
+  instagramPostUrl3: "",
   smokingNote: "",
   equipmentNote: "",
   latitude: null,
@@ -379,6 +391,10 @@ const mapCafeToFormPayload = (cafe: Cafe): CafeFormPayload => ({
   website: cafe.website,
   instagramUrl: cafe.instagramUrl,
   tiktokUrl: cafe.tiktokUrl,
+  firstRequestAccountId: cafe.firstRequestAccountId ?? "",
+  instagramPostUrl1: cafe.instagramPostUrl1,
+  instagramPostUrl2: cafe.instagramPostUrl2,
+  instagramPostUrl3: cafe.instagramPostUrl3,
   smokingNote: cafe.smokingNote,
   equipmentNote: cafe.equipmentNote,
   latitude: cafe.latitude,
@@ -1484,6 +1500,30 @@ function InfoStep({
           placeholder="https://tiktok.com/@..."
           onChange={(value) => onChange("tiktokUrl", value)}
         />
+        <TextField
+          label="初回掲載申請アカウントID"
+          value={formState.firstRequestAccountId}
+          placeholder="uuid"
+          onChange={(value) => onChange("firstRequestAccountId", value)}
+        />
+        <TextField
+          label="Instagram投稿URL 1"
+          value={formState.instagramPostUrl1}
+          placeholder="https://www.instagram.com/p/..."
+          onChange={(value) => onChange("instagramPostUrl1", value)}
+        />
+        <TextField
+          label="Instagram投稿URL 2"
+          value={formState.instagramPostUrl2}
+          placeholder="https://www.instagram.com/p/..."
+          onChange={(value) => onChange("instagramPostUrl2", value)}
+        />
+        <TextField
+          label="Instagram投稿URL 3"
+          value={formState.instagramPostUrl3}
+          placeholder="https://www.instagram.com/p/..."
+          onChange={(value) => onChange("instagramPostUrl3", value)}
+        />
       </Section>
 
       <Section title="住所情報">
@@ -1708,9 +1748,9 @@ function InfoStep({
       <Section title="料金・雰囲気">
         <TextAreaField
           label="支払い方法"
-          value={formState.paymentMethods.join(", ")}
-          rows={2}
-          placeholder="例: 現金, クレジットカード, QR決済, 交通系IC"
+          value={formState.paymentMethods.join("\n")}
+          rows={4}
+          placeholder={"例:\n現金\nクレジットカード\nQR決済\n交通系IC"}
           onChange={(value) => onChange("paymentMethods", parseMultiValueText(value))}
         />
         <div className="grid gap-4 md:grid-cols-2">
@@ -2276,21 +2316,31 @@ function TimeRangeField({
     <div>
       <p className="text-sm font-medium text-gray-700">{label}</p>
       <div className="mt-2 flex items-center gap-2">
-        <input
-          type="time"
-          step={900}
+        <select
           value={from}
           onChange={(event) => onChange({ from: event.target.value, to })}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-        />
+        >
+          <option value="">開始時刻を選択</option>
+          {TIME_SELECT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <span className="text-gray-500">〜</span>
-        <input
-          type="time"
-          step={900}
+        <select
           value={to}
           onChange={(event) => onChange({ from, to: event.target.value })}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-        />
+        >
+          <option value="">終了時刻を選択</option>
+          {TIME_SELECT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );

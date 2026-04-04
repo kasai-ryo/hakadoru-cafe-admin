@@ -94,6 +94,10 @@ const FIELD_LABELS: Record<string, string> = {
   crowdMatrix: "混雑状況",
   instagramUrl: "Instagram",
   tiktokUrl: "TikTok",
+  firstRequestAccountId: "初回掲載申請アカウントID",
+  instagramPostUrl1: "Instagram投稿URL 1",
+  instagramPostUrl2: "Instagram投稿URL 2",
+  instagramPostUrl3: "Instagram投稿URL 3",
   latitude: "緯度",
   longitude: "経度",
 };
@@ -189,6 +193,57 @@ function renderEditRequestPreview(payload: unknown) {
   );
 }
 
+function renderCafeRequestPreview(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return null;
+  }
+
+  const data = payload as Record<string, unknown>;
+  const items = [
+    {
+      label: "初回掲載申請アカウントID",
+      value: typeof data.firstRequestAccountId === "string" && data.firstRequestAccountId
+        ? data.firstRequestAccountId
+        : "未設定",
+    },
+    {
+      label: "Instagram投稿URL 1",
+      value:
+        typeof data.instagramPostUrl1 === "string" && data.instagramPostUrl1
+          ? data.instagramPostUrl1
+          : "未設定",
+    },
+    {
+      label: "Instagram投稿URL 2",
+      value:
+        typeof data.instagramPostUrl2 === "string" && data.instagramPostUrl2
+          ? data.instagramPostUrl2
+          : "未設定",
+    },
+    {
+      label: "Instagram投稿URL 3",
+      value:
+        typeof data.instagramPostUrl3 === "string" && data.instagramPostUrl3
+          ? data.instagramPostUrl3
+          : "未設定",
+    },
+  ];
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">確認項目</p>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        {items.map((item) => (
+          <div key={item.label} className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
+            <p className="text-xs font-semibold text-gray-500">{item.label}</p>
+            <p className="mt-1 break-all text-sm text-gray-800">{item.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RequestCard({ item }: { item: AdminRequestItem }) {
   const canOpenCafe = Boolean(item.cafeId);
 
@@ -244,6 +299,8 @@ function RequestCard({ item }: { item: AdminRequestItem }) {
           <p className="mt-1 whitespace-pre-wrap text-sm text-gray-800">{item.adminComment}</p>
         </div>
       )}
+
+      {item.kind === "cafe_request" && renderCafeRequestPreview(item.payload)}
 
       {item.kind === "cafe_edit_request" && (
         <div className="mt-4">

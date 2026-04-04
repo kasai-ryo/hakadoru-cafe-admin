@@ -39,6 +39,7 @@ export default async function AdminCafeDetailPage({
   const supabase = getSupabaseServerClient();
   let cafe: Cafe | null = null;
   let cafeRequest: CafeRequestDetail | null = null;
+  let firstRequestAccountName: string | null = null;
 
   if (supabase) {
     const { data, error } = await supabase
@@ -86,6 +87,24 @@ export default async function AdminCafeDetailPage({
         reviewedAt: (requestRow.reviewed_at as string | null) ?? null,
       };
     }
+
+    if (cafe?.firstRequestAccountId) {
+      if (cafeRequest && cafeRequest.accountId === cafe.firstRequestAccountId) {
+        firstRequestAccountName = cafeRequest.accountName;
+      } else {
+        const { data: firstRequestAccountRow, error: firstRequestAccountError } = await supabase
+          .from("accounts")
+          .select("display_name")
+          .eq("id", cafe.firstRequestAccountId)
+          .maybeSingle();
+
+        if (firstRequestAccountError) {
+          console.error("[admin/cafes/id] Failed to fetch first request account", firstRequestAccountError);
+        } else if (firstRequestAccountRow?.display_name) {
+          firstRequestAccountName = firstRequestAccountRow.display_name as string;
+        }
+      }
+    }
   }
 
   if (!cafe) {
@@ -101,6 +120,7 @@ export default async function AdminCafeDetailPage({
       <AdminCafeDetail
         cafe={cafe}
         cafeRequest={cafeRequest}
+        firstRequestAccountName={firstRequestAccountName}
         initialAuthenticated
         initialDraftSnapshotId={resolvedSearchParams?.draftId ?? null}
       />

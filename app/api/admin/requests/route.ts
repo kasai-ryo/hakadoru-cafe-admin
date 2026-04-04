@@ -1,8 +1,10 @@
 "use server";
 
 import { NextResponse } from "next/server";
+import { geocodeCafeAddress } from "@/app/api/cafes/serverHelpers";
 import { getSupabaseServerClient } from "@/app/lib/supabaseServer";
 import { isAdminAuthenticatedFromCookies } from "@/app/lib/adminAuth";
+import type { CafeFormPayload } from "@/app/types/cafe";
 
 type RequestStatus = "pending" | "approved" | "rejected" | "withdrawn";
 type RequestKind = "cafe_request" | "cafe_edit_request";
@@ -31,6 +33,22 @@ type CafeEditRequestRow = {
   reviewed_at: string | null;
 };
 
+type CafeRequestCafeRow = {
+  id: string;
+  name?: string;
+  prefecture: string;
+  postal_code: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  address_line3: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  first_request_account_id?: string | null;
+  instagram_post_url_1?: string | null;
+  instagram_post_url_2?: string | null;
+  instagram_post_url_3?: string | null;
+};
+
 const VALID_STATUSES = new Set<RequestStatus>([
   "pending",
   "approved",
@@ -39,6 +57,93 @@ const VALID_STATUSES = new Set<RequestStatus>([
 ]);
 
 const VALID_KINDS = new Set<RequestKind>(["cafe_request", "cafe_edit_request"]);
+
+function buildGeocodePayloadFromCafe(cafe: CafeRequestCafeRow): CafeFormPayload {
+  return {
+    name: "",
+    facilityType: "cafe",
+    prefecture: cafe.prefecture,
+    postalCode: cafe.postal_code ?? "",
+    addressLine1: cafe.address_line1 ?? "",
+    addressLine2: cafe.address_line2 ?? "",
+    addressLine3: cafe.address_line3 ?? "",
+    access: "",
+    nearestStation: "",
+    phone: "",
+    status: "open",
+    timeLimit: "",
+    hoursWeekdayFrom: "",
+    hoursWeekdayTo: "",
+    hoursWeekendFrom: "",
+    hoursWeekendTo: "",
+    hoursNote: "",
+    regularHolidays: [],
+    seats: "",
+    wifi: false,
+    outlet: "none",
+    lighting: "normal",
+    meetingRoom: false,
+    hasPrivateBooths: false,
+    smoking: "no_smoking",
+    alcohol: "unavailable",
+    mainMenu: "",
+    services: [],
+    paymentMethods: [],
+    recommendedWorkStyles: [],
+    crowdMatrix: {
+      weekday0608: "unknown",
+      weekday0810: "unknown",
+      weekday1012: "unknown",
+      weekday1214: "unknown",
+      weekday1416: "unknown",
+      weekday1618: "unknown",
+      weekday1820: "unknown",
+      weekday2022: "unknown",
+      weekday2224: "unknown",
+      weekend0608: "unknown",
+      weekend0810: "unknown",
+      weekend1012: "unknown",
+      weekend1214: "unknown",
+      weekend1416: "unknown",
+      weekend1618: "unknown",
+      weekend1820: "unknown",
+      weekend2022: "unknown",
+      weekend2224: "unknown",
+    },
+    ambienceCasual: 0,
+    ambienceModern: 0,
+    ambassadorComment: "",
+    website: "",
+    instagramUrl: "",
+    tiktokUrl: "",
+    firstRequestAccountId: cafe.first_request_account_id ?? "",
+    instagramPostUrl1: cafe.instagram_post_url_1 ?? "",
+    instagramPostUrl2: cafe.instagram_post_url_2 ?? "",
+    instagramPostUrl3: cafe.instagram_post_url_3 ?? "",
+    smokingNote: "",
+    equipmentNote: "",
+    latitude: cafe.latitude,
+    longitude: cafe.longitude,
+    images: {
+      main: null,
+      exterior: null,
+      interior: null,
+      power: null,
+      drink: null,
+      food: null,
+      other1: null,
+      other2: null,
+      other3: null,
+      other4: null,
+      other5: null,
+      other6: null,
+      other7: null,
+      other8: null,
+      other9: null,
+      other10: null,
+    },
+  };
+}
 
 export async function GET() {
   const isAuthenticated = await isAdminAuthenticatedFromCookies();
@@ -121,10 +226,19 @@ export async function GET() {
   ]));
   const cafeNameMap = new Map<string, string>();
   const cafeApprovalStatusMap = new Map<string, RequestStatus>();
+  const cafeMetadataMap = new Map<
+    string,
+    {
+      firstRequestAccountId: string | null;
+      instagramPostUrl1: string | null;
+      instagramPostUrl2: string | null;
+      instagramPostUrl3: string | null;
+    }
+  >();
   if (cafeIds.length > 0) {
     const { data: cafes, error: cafesError } = await supabase
       .from("cafes")
-      .select("id, name, approval_status")
+      .select("id, name, approval_status, first_request_account_id, instagram_post_url_1, instagram_post_url_2, instagram_post_url_3")
       .in("id", cafeIds);
     if (cafesError) {
       console.error("[admin/requests:GET] Failed to fetch cafes", cafesError);
@@ -132,6 +246,12 @@ export async function GET() {
       for (const cafe of cafes ?? []) {
         cafeNameMap.set(cafe.id as string, cafe.name as string);
         cafeApprovalStatusMap.set(cafe.id as string, (cafe.approval_status as RequestStatus) ?? "pending");
+        cafeMetadataMap.set(cafe.id as string, {
+          firstRequestAccountId: (cafe.first_request_account_id as string | null) ?? null,
+          instagramPostUrl1: (cafe.instagram_post_url_1 as string | null) ?? null,
+          instagramPostUrl2: (cafe.instagram_post_url_2 as string | null) ?? null,
+          instagramPostUrl3: (cafe.instagram_post_url_3 as string | null) ?? null,
+        });
       }
     }
   }
@@ -147,7 +267,19 @@ export async function GET() {
       createdAt: row.created_at,
       updatedAt: row.updated_at,
       reviewedAt: row.reviewed_at,
-      payload: null,
+      payload: row.cafe_id
+        ? {
+          cafeName: cafeNameMap.get(row.cafe_id) ?? null,
+            firstRequestAccountId:
+              cafeMetadataMap.get(row.cafe_id)?.firstRequestAccountId ?? null,
+            instagramPostUrl1:
+              cafeMetadataMap.get(row.cafe_id)?.instagramPostUrl1 ?? null,
+            instagramPostUrl2:
+              cafeMetadataMap.get(row.cafe_id)?.instagramPostUrl2 ?? null,
+            instagramPostUrl3:
+              cafeMetadataMap.get(row.cafe_id)?.instagramPostUrl3 ?? null,
+          }
+        : null,
       cafeId: row.cafe_id ?? null,
       cafeName: row.cafe_id ? (cafeNameMap.get(row.cafe_id) ?? null) : null,
       reason: null as string | null,
@@ -243,9 +375,43 @@ export async function PATCH(request: Request) {
     }
 
     if (reqRow.cafe_id) {
+      const cafeUpdatePayload: Record<string, unknown> = {
+        approval_status: body.status,
+      };
+
+      if (body.status === "approved") {
+        const { data: cafeRow, error: cafeFetchError } = await supabase
+          .from("cafes")
+          .select("id, prefecture, postal_code, address_line1, address_line2, address_line3, latitude, longitude")
+          .eq("id", reqRow.cafe_id)
+          .maybeSingle();
+
+        if (cafeFetchError) {
+          console.error("[admin/requests:PATCH] Failed to fetch cafe for geocoding", cafeFetchError);
+          return NextResponse.json(
+            { message: "承認対象カフェの取得に失敗しました。", detail: cafeFetchError.message },
+            { status: 500 },
+          );
+        }
+
+        if (cafeRow && (cafeRow.latitude == null || cafeRow.longitude == null)) {
+          try {
+            const coords = await geocodeCafeAddress(
+              buildGeocodePayloadFromCafe(cafeRow as CafeRequestCafeRow),
+            );
+            if (coords) {
+              cafeUpdatePayload.latitude = coords.latitude;
+              cafeUpdatePayload.longitude = coords.longitude;
+            }
+          } catch (geoError) {
+            console.warn("[admin/requests:PATCH] Geocoding failed during cafe_request approval", geoError);
+          }
+        }
+      }
+
       const { error: cafeUpdateError } = await supabase
         .from("cafes")
-        .update({ approval_status: body.status })
+        .update(cafeUpdatePayload)
         .eq("id", reqRow.cafe_id);
 
       if (cafeUpdateError) {

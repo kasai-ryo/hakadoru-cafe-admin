@@ -45,6 +45,7 @@ interface AdminCafeDetailProps {
     updatedAt: string;
     reviewedAt: string | null;
   } | null;
+  firstRequestAccountName?: string | null;
   initialAuthenticated?: boolean;
   initialDraftSnapshotId?: string | null;
 }
@@ -56,6 +57,7 @@ const SESSION_KEY = "hakadoru-admin-session";
 export function AdminCafeDetail({
   cafe,
   cafeRequest = null,
+  firstRequestAccountName = null,
   initialAuthenticated = false,
   initialDraftSnapshotId,
 }: AdminCafeDetailProps) {
@@ -315,6 +317,14 @@ export function AdminCafeDetail({
                   },
                   { label: "申請ID", value: currentCafeRequest.id },
                   { label: "申請日時", value: formatDateTime(currentCafeRequest.createdAt) },
+                  {
+                    label: "初回掲載申請アカウントID",
+                    value: currentCafe.firstRequestAccountId
+                      ? firstRequestAccountName
+                        ? `${firstRequestAccountName}（${currentCafe.firstRequestAccountId}）`
+                        : currentCafe.firstRequestAccountId
+                      : "未設定",
+                  },
                   { label: "最終更新", value: formatDateTime(currentCafeRequest.updatedAt) },
                   { label: "レビュー日時", value: formatDateTime(currentCafeRequest.reviewedAt) },
                   {
@@ -445,6 +455,26 @@ export function AdminCafeDetail({
               {
                 label: "TikTok",
                 value: renderOptionalLink(currentCafe.tiktokUrl),
+              },
+              {
+                label: "初回掲載申請アカウントID",
+                value: currentCafe.firstRequestAccountId
+                  ? firstRequestAccountName
+                    ? `${firstRequestAccountName}（${currentCafe.firstRequestAccountId}）`
+                    : currentCafe.firstRequestAccountId
+                  : "未設定",
+              },
+              {
+                label: "Instagram投稿URL 1",
+                value: renderOptionalLink(currentCafe.instagramPostUrl1),
+              },
+              {
+                label: "Instagram投稿URL 2",
+                value: renderOptionalLink(currentCafe.instagramPostUrl2),
+              },
+              {
+                label: "Instagram投稿URL 3",
+                value: renderOptionalLink(currentCafe.instagramPostUrl3),
               },
             ]}
           />

@@ -91,6 +91,10 @@ type CafeTableRow = {
   website: string | null;
   instagram_url: string | null;
   tiktok_url: string | null;
+  first_request_account_id: string | null;
+  instagram_post_url_1: string | null;
+  instagram_post_url_2: string | null;
+  instagram_post_url_3: string | null;
   smoking_note: string | null;
   equipment_note: string | null;
   latitude: number | null;
@@ -161,6 +165,10 @@ export function changePayloadToCafe(
     website: payload.website,
     instagramUrl: payload.instagramUrl,
     tiktokUrl: payload.tiktokUrl,
+    firstRequestAccountId: payload.firstRequestAccountId || base?.firstRequestAccountId || null,
+    instagramPostUrl1: payload.instagramPostUrl1,
+    instagramPostUrl2: payload.instagramPostUrl2,
+    instagramPostUrl3: payload.instagramPostUrl3,
     smokingNote: payload.smokingNote,
     equipmentNote: payload.equipmentNote,
     latitude: payload.latitude ?? base?.latitude ?? null,
@@ -263,6 +271,10 @@ export function buildCafeTableInsert(payload: CafeFormPayload): CafeTableInsert 
     website: payload.website || null,
     instagram_url: payload.instagramUrl || null,
     tiktok_url: payload.tiktokUrl || null,
+    first_request_account_id: payload.firstRequestAccountId || null,
+    instagram_post_url_1: payload.instagramPostUrl1 || null,
+    instagram_post_url_2: payload.instagramPostUrl2 || null,
+    instagram_post_url_3: payload.instagramPostUrl3 || null,
     smoking_note: payload.smokingNote || null,
     equipment_note: payload.equipmentNote || null,
     latitude: payload.latitude ?? null,
@@ -331,6 +343,10 @@ export function mapCafeRowToCafe(
     website: row.website ?? "",
     instagramUrl: row.instagram_url ?? "",
     tiktokUrl: row.tiktok_url ?? "",
+    firstRequestAccountId: row.first_request_account_id ?? null,
+    instagramPostUrl1: row.instagram_post_url_1 ?? "",
+    instagramPostUrl2: row.instagram_post_url_2 ?? "",
+    instagramPostUrl3: row.instagram_post_url_3 ?? "",
     smokingNote: row.smoking_note ?? "",
     equipmentNote: row.equipment_note ?? "",
     latitude: row.latitude ?? null,

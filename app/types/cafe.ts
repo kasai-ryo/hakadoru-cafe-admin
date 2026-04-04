@@ -94,6 +94,10 @@ export interface Cafe {
   website: string;
   instagramUrl: string;
   tiktokUrl: string;
+  firstRequestAccountId: string | null;
+  instagramPostUrl1: string;
+  instagramPostUrl2: string;
+  instagramPostUrl3: string;
   smokingNote: string;
   equipmentNote: string;
   latitude: number | null;
@@ -149,6 +153,10 @@ export interface CafeFormPayload {
   website: string;
   instagramUrl: string;
   tiktokUrl: string;
+  firstRequestAccountId: string;
+  instagramPostUrl1: string;
+  instagramPostUrl2: string;
+  instagramPostUrl3: string;
   smokingNote: string;
   equipmentNote: string;
   latitude: number | null;
